@@ -1,6 +1,6 @@
 # ConcurrentBooking
 
-A production-grade slot-booking API that demonstrates **real concurrency guarantees** under high contention: anti-overbooking, idempotency, and automatic hold expiration — all backed by PostgreSQL, not in-memory tricks.
+A production-grade slot-booking API that demonstrates **real concurrency guarantees** under high contention: anti-overbooking, idempotency, and automatic hold expiration ; all backed by PostgreSQL, not in-memory tricks.
 
 ---
 
@@ -8,7 +8,7 @@ A production-grade slot-booking API that demonstrates **real concurrency guarant
 
 | Guarantee | Mechanism |
 |---|---|
-| **Anti-overbooking** | `UNIQUE` constraint on `bookings.SlotId` — the DB is the final arbiter, not application-level locks |
+| **Anti-overbooking** | `UNIQUE` constraint on `bookings.SlotId` ; the DB is the final arbiter, not application-level locks |
 | **Single active hold per slot** | Partial unique index `idx_holds_slot_active` on `holds(SlotId) WHERE Status = 0` (Postgres) |
 | **Idempotency** | HTTP `Idempotency-Key` header handled by `IdempotencyMiddleware`; stores full response, replays on retry |
 | **Hold expiration** | `HoldExpirationService` (BackgroundService) scans every 30 s and transitions stale Active → Expired holds |
@@ -86,7 +86,7 @@ dotnet test --filter "FullyQualifiedName~ConcurrencyTests"
 
 ### Integration / stress tests (requires Docker)
 
-The integration tests use **Testcontainers** to spin up a real PostgreSQL instance automatically — no manual setup needed.
+The integration tests use **Testcontainers** to spin up a real PostgreSQL instance automatically ; no manual setup needed.
 
 ```bash
 dotnet test --filter "FullyQualifiedName~ConcurrencyIntegrationTests"
@@ -94,9 +94,9 @@ dotnet test --filter "FullyQualifiedName~ConcurrencyIntegrationTests"
 
 **What the stress tests prove:**
 
-- `OnlyOneHoldSucceedsWhen100ConcurrentHoldRequestsRace` — 100 tasks race to hold the same slot; exactly 1 wins via the Postgres partial unique index.
-- `OnlyOneBookingSucceedsWhen100ConcurrentConfirmRequestsRace` — 100 tasks race to confirm the same hold; exactly 1 booking is created via the `UNIQUE(bookings.SlotId)` constraint.
-- `ConfirmAfterHoldExpiredReturnsError` — confirms that a 1 ms TTL hold correctly blocks confirmation.
+- `OnlyOneHoldSucceedsWhen100ConcurrentHoldRequestsRace` ; 100 tasks race to hold the same slot; exactly 1 wins via the Postgres partial unique index.
+- `OnlyOneBookingSucceedsWhen100ConcurrentConfirmRequestsRace` ; 100 tasks race to confirm the same hold; exactly 1 booking is created via the `UNIQUE(bookings.SlotId)` constraint.
+- `ConfirmAfterHoldExpiredReturnsError` ; confirms that a 1 ms TTL hold correctly blocks confirmation.
 
 ### Coverage
 
@@ -113,10 +113,10 @@ dotnet-coverage collect -f cobertura -o coverage.cobertura.xml dotnet test
 
 | Approach | In-memory lock / `ConcurrentDictionary` | **DB constraint (chosen)** |
 |---|---|---|
-| Multi-instance safe | ❌ No — each pod has its own memory | ✅ Yes — single source of truth |
+| Multi-instance safe | ❌ No ; each pod has its own memory | ✅ Yes ; single source of truth |
 | Survives restart | ❌ No | ✅ Yes |
 | Throughput | High (no I/O) | High (index seek, no row scan) |
-| Correctness proof | Hard to reason about | Declarative — the DB spec defines it |
+| Correctness proof | Hard to reason about | Declarative ; the DB spec defines it |
 
 The `UNIQUE` constraint on `bookings.SlotId` and the partial index `idx_holds_slot_active` are the **only** places that need to be correct. Everything else is defense-in-depth.
 
@@ -154,4 +154,4 @@ ConcurrentBooking.Tests/          Unit tests (in-memory) + Integration stress te
 | P1 | OpenTelemetry tracing + structured logging with correlation-id |
 | P1 | Rate limiting per `customerId` to prevent hold-spam |
 | P2 | Redis distributed lock for ultra-hot slots (single-writer pattern) |
-| P2 | CQRS read model — optimized availability query without touching the write tables |
+| P2 | CQRS read model ; optimized availability query without touching the write tables |
