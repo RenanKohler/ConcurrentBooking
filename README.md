@@ -1,6 +1,6 @@
 # ConcurrentBooking
 
-A production-grade slot-booking API that demonstrates **real concurrency guarantees** under high contention: anti-overbooking, idempotency, and automatic hold expiration ; all backed by PostgreSQL, not in-memory tricks.
+A production-grade slot-booking API that demonstrates **real concurrency guarantees** under high contention: anti-overbooking, idempotency, and automatic hold expiration; all backed by PostgreSQL, not in-memory tricks.
 
 ---
 
