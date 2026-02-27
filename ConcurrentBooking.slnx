@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="todo.txt" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="Api/ConcurrentBooking.Api.csproj" />
+    <Project Path="ConcurrentBooking.Application/ConcurrentBooking.Application.csproj" />
+    <Project Path="ConcurrentBooking.Domain/ConcurrentBooking.Domain.csproj" />
+    <Project Path="ConcurrentBooking.Infrastructure/ConcurrentBooking.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="ConcurrentBooking.Tests/ConcurrentBooking.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,217 @@
+### Objetivo do portfólio
+
+Provar **concorrência real**: evitar overbooking sob alta disputa, com garantias explícitas (idempotência, consistência, observabilidade). O “produto” é reserva de slots/assentos.
+
+---
+
+## Ordem de prioridades (MVP → Hard Mode)
+
+### P0 (MVP consistente, já “não é CRUD fake”)
+
+1. **Modelo de domínio**: Resource/Slot, Hold, Booking, IdempotencyKey
+2. **Fluxo “Hold → Confirm”** (reserva temporária antes de confirmar)
+3. **Garantia anti-overbooking** no nível do banco (constraint/lock) + transação
+4. **Timeout de hold** (expiração) + cleanup
+5. **Idempotência** nas operações (principalmente Confirm)
+6. **Testes de concorrência** (stress determinístico)
+
+### P1 (produção de verdade)
+
+7. **Outbox + eventos** (BookingConfirmed, HoldExpired)
+8. **Observabilidade** (correlation-id, métricas, tracing)
+9. **Rate limit / anti-abuso** e backpressure
+10. **Read model** otimizado (CQRS leve)
+
+### P2 (distribuído e bonito no currículo)
+
+11. **Locks distribuídos/leases** (Redis) para hotspots específicos (opcional)
+12. **Sharding por ResourceId** (single-writer por partição)
+13. **Fila para “single writer”** (saga/command queue) como alternativa ao lock
+
+---
+
+## Decisão de arquitetura (simples e forte)
+
+### Abordagem recomendada para P0
+
+**Banco relacional + transações + constraint** (é o que empresas fazem quando precisam garantir).
+Você demonstra maturidade ao usar a camada certa: consistência no DB, não “lock na memória”.
+
+---
+
+## Estruturas do domínio (núcleo)
+
+### Entidades
+
+* **Resource**: algo reservável (sala, voo, evento)
+* **Slot**: unidade reservável (ex: assento A1, ou time window 10:00-10:30)
+* **Hold**: “pré-reserva” com expiração
+* **Booking**: reserva confirmada (imutável após confirmada)
+* **IdempotencyRecord**: chave → resposta/código → replay
+
+### Invariantes (o que você precisa garantir)
+
+* Um **Slot** pode ter **no máximo 1 Booking ativa**
+* Um **Slot** pode ter **no máximo 1 Hold ativo** (ou N holds, mas só 1 “winner”, eu recomendo 1)
+* Hold expira automaticamente e libera o slot
+* Confirm só funciona se hold ainda está válido
+* Requisições repetidas com a mesma idempotency key não duplicam booking
+
+---
+
+## Esquema de banco (Postgres-like, mas serve em geral)
+
+### Tabelas
+
+* `resources(id, name, ...)`
+* `slots(id, resource_id, starts_at, ends_at, seat_code, ...)`
+* `holds(id, slot_id, customer_id, expires_at, status, created_at, request_id UNIQUE)`
+* `bookings(id, slot_id UNIQUE, customer_id, hold_id UNIQUE, status, created_at, request_id UNIQUE)`
+* `idempotency(key, route, request_hash, response_body, status_code, created_at, UNIQUE(key, route))`
+
+### Constraints-chave (anti-CRUD fake)
+
+* `bookings.slot_id UNIQUE`  → impede dois bookings no mesmo slot
+* `holds.slot_id UNIQUE WHERE status='ACTIVE'` (partial unique index no Postgres)
+  Se não tiver partial index: use coluna `active_hold_slot_id` ou lock pessimista.
+* `request_id UNIQUE` em hold/booking → idempotência simples por request
+
+---
+
+## Fluxos de API (contrato mínimo)
+
+### 1) Criar hold
+
+`POST /slots/{slotId}/hold`
+
+* input: `customerId`, `idempotencyKey`
+* output: `holdId`, `expiresAt`
+
+Regras:
+
+* transação
+* tenta inserir hold ACTIVE (falha se já existe hold ativo ou booking)
+* retorna 409 se indisponível
+
+### 2) Confirmar booking
+
+`POST /holds/{holdId}/confirm`
+
+* input: `paymentToken` (fake ok), `idempotencyKey`
+* output: `bookingId`
+
+Regras:
+
+* transação
+* valida hold ACTIVE e não expirado
+* insere booking (constraint de slot único garante anti-overbooking)
+* marca hold CONSUMED
+
+### 3) Cancelar booking (opcional P1)
+
+`POST /bookings/{bookingId}/cancel`
+
+---
+
+## Camadas e pastas (.NET sugestão)
+
+**Monorepo**
+
+* `ConcurrentBooking.Domain`
+
+  * Entidades, Value Objects, Regras, Erros
+* `ConcurrentBooking.Application`
+
+  * UseCases (HoldSlot, ConfirmBooking), Ports, DTOs
+* `ConcurrentBooking.Infrastructure`
+
+  * EF/Dapper, Repos, Outbox, Redis (P2)
+* `ConcurrentBooking.Api`
+
+  * Controllers, Auth fake, Idempotency middleware
+* `ConcurrentBooking.Tests`
+
+  * Unit + Integration + Concurrency stress
+
+### Padrões
+
+* UseCases estilo “Command Handler”
+* Repositórios finos, lógica no Application/Domain
+* Infrastructure só implementa interfaces
+
+---
+
+## Estratégia de concorrência (P0)
+
+Escolha 1 (minha recomendação) e documente no README.
+
+### Opção A: **Constraint + transação** (mais limpa)
+
+* No Confirm, o insert em `bookings` com `UNIQUE(slot_id)` é a barreira final.
+* Se duas confirmações correrem, uma falha com unique violation → retorna 409.
+
+### Opção B: **SELECT … FOR UPDATE** (pessimista)
+
+* Locka a linha do slot/hold durante o fluxo.
+* Mais previsível, mas pode reduzir throughput.
+
+Use A como base e B como “modo explicativo” no README.
+
+---
+
+## Idempotência (tem que ter)
+
+### Onde colocar
+
+* Middleware no API: `Idempotency-Key` obrigatório em endpoints mutáveis
+* Armazena request hash + resposta
+* Se repetido: retorna resposta original
+
+Benefício: mostra maturidade e evita “double click double booking”.
+
+---
+
+## Testes (o que vira print no README)
+
+### Teste de corrida (essencial)
+
+* 100 tasks tentando hold/confirm do mesmo slot
+* Resultado esperado:
+
+  * 1 booking confirmado
+  * restantes = 409 / “unavailable”
+  * zero duplicação
+
+### Teste de expiração
+
+* hold expira
+* confirm depois da expiração → 409/410
+
+### Teste de idempotência
+
+* repetir confirm com mesma key → mesmo bookingId
+
+---
+
+## Checklist do README (o que vende o projeto)
+
+* “Guarantees” (bullet list)
+* Diagrama simples do fluxo Hold → Confirm
+* Como rodar local (docker-compose com Postgres)
+* Como rodar stress test
+* Decisões: constraint vs lock, trade-offs
+* Roadmap P1/P2
+
+---
+
+## Entrega prática (primeiro sprint de implementação)
+
+1. Criar solução e projetos (Domain/Application/Infra/Api/Tests)
+2. Modelar tabelas e migrations
+3. Implementar `HoldSlot` com constraint/tx
+4. Implementar `ConfirmBooking` com constraint/tx
+5. Implementar idempotency middleware simples
+6. Criar testes de integração + stress (Task.WhenAll)
+7. Docker-compose + README
+
+Se você seguir essa ordem, em pouco tempo já tem um repositório que “cheira” a produção e prova concorrência de verdade.
