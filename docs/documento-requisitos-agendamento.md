@@ -46,7 +46,7 @@ Fora de escopo (neste ciclo):
 
 ## 4. Fluxos Principais
 
-## 4.1 Buscar profissional por especialidade/unidade
+### 4.1 Buscar profissional por especialidade/unidade
 **Pré-condições:**
 - Usuário autenticado.
 - Especialidades e unidades cadastradas.
@@ -64,7 +64,7 @@ Fora de escopo (neste ciclo):
 - Exibir apenas profissionais ativos e com agenda publicada.
 - Caso unidade não seja selecionada, permitir busca multiunidade com indicação da unidade de cada slot.
 
-## 4.2 Listar disponibilidade por data/período
+### 4.2 Listar disponibilidade por data/período
 **Pré-condições:**
 - Profissional selecionado.
 - Agenda do profissional publicada para a unidade.
@@ -81,7 +81,7 @@ Fora de escopo (neste ciclo):
 - Mostrar apenas horários dentro da janela mínima/máxima permitida.
 - Não exibir slots bloqueados, já reservados ou indisponíveis por regras internas.
 
-## 4.3 Reservar horário
+### 4.3 Reservar horário
 **Pré-condições:**
 - Slot válido e ainda disponível no momento da ação.
 - Paciente elegível para agendar (cadastro e políticas em dia).
@@ -98,23 +98,23 @@ Fora de escopo (neste ciclo):
 - Operação deve ser idempotente para evitar dupla criação em caso de retry.
 - Bloqueio concorrente: apenas uma reserva pode vencer para o mesmo slot.
 
-## 4.4 Confirmar, cancelar e reagendar
+### 4.4 Confirmar, cancelar e reagendar
 
-### 4.4.1 Confirmar
+#### 4.4.1 Confirmar
 **Fluxo principal:**
 1. Usuário acessa detalhes do agendamento reservado.
 2. Usuário confirma o agendamento.
 3. Sistema atualiza status para `CONFIRMADO`.
 4. Sistema emite confirmação (tela + notificação).
 
-### 4.4.2 Cancelar
+#### 4.4.2 Cancelar
 **Fluxo principal:**
 1. Usuário acessa agendamento existente.
 2. Usuário seleciona cancelar e informa motivo (opcional para paciente, obrigatório para recepção).
 3. Sistema valida política de cancelamento (prazo mínimo, penalidades).
 4. Sistema atualiza status para `CANCELADO` e libera slot conforme regra.
 
-### 4.4.3 Reagendar
+#### 4.4.3 Reagendar
 **Fluxo principal:**
 1. Usuário seleciona reagendar em um agendamento elegível.
 2. Sistema direciona para busca de nova disponibilidade.
@@ -128,18 +128,18 @@ Fora de escopo (neste ciclo):
 
 ## 5. Regras de Negócio Críticas
 
-## 5.1 Janela mínima/máxima para agendamento
+### 5.1 Janela mínima/máxima para agendamento
 - **Janela mínima:** não permitir agendar com antecedência inferior a **X horas** do horário da consulta.
 - **Janela máxima:** não permitir agendar além de **Y dias** no futuro.
 - Valores de X e Y devem ser configuráveis por especialidade/unidade.
 
-## 5.2 Regras para conflito de horário
+### 5.2 Regras para conflito de horário
 - Um mesmo slot só pode ter um agendamento ativo (`RESERVADO`/`CONFIRMADO`).
 - Paciente não pode ter dois agendamentos sobrepostos.
 - Recepcionista deve receber alerta de conflito antes de concluir operação.
 - Em concorrência, o sistema deve garantir consistência transacional e retornar erro de conflito para a tentativa perdedora.
 
-## 5.3 Políticas de cancelamento e no-show
+### 5.3 Políticas de cancelamento e no-show
 - Cancelamento sem penalidade até **N horas** antes da consulta.
 - Cancelamento fora do prazo pode registrar ocorrência para política interna.
 - No-show (falta sem comparecimento) deve:
@@ -153,7 +153,7 @@ Fora de escopo (neste ciclo):
 
 ## 6. Mensagens de Erro e Estados de UI por Etapa
 
-## 6.1 Buscar profissional
+### 6.1 Buscar profissional
 **Estados de UI:**
 - `loading`: carregando filtros/listagem.
 - `empty`: nenhum profissional encontrado.
@@ -163,7 +163,7 @@ Fora de escopo (neste ciclo):
 - `Nenhum profissional encontrado para os filtros selecionados.`
 - `Não foi possível carregar os profissionais. Tente novamente.`
 
-## 6.2 Listar disponibilidade
+### 6.2 Listar disponibilidade
 **Estados de UI:**
 - `loading`: buscando horários.
 - `empty`: sem horários para data/período.
@@ -174,7 +174,7 @@ Fora de escopo (neste ciclo):
 - `Este horário acabou de ser reservado. Escolha outro horário.`
 - `Falha ao carregar disponibilidade. Atualize a página e tente novamente.`
 
-## 6.3 Reservar horário
+### 6.3 Reservar horário
 **Estados de UI:**
 - `submitting`: processando reserva.
 - `success`: reserva criada.
@@ -187,7 +187,7 @@ Fora de escopo (neste ciclo):
 - `Você já possui agendamento em horário conflitante.`
 - `Não é possível agendar fora da janela permitida.`
 
-## 6.4 Confirmar agendamento
+### 6.4 Confirmar agendamento
 **Estados de UI:**
 - `submitting`: confirmando.
 - `success`: confirmado.
@@ -198,7 +198,7 @@ Fora de escopo (neste ciclo):
 - `Esta reserva expirou e não pode mais ser confirmada.`
 - `Não foi possível confirmar agora. Tente novamente em instantes.`
 
-## 6.5 Cancelar agendamento
+### 6.5 Cancelar agendamento
 **Estados de UI:**
 - `submitting`: cancelando.
 - `success`: cancelado.
@@ -209,7 +209,7 @@ Fora de escopo (neste ciclo):
 - `Cancelamento fora do prazo permitido.`
 - `Não foi possível cancelar este agendamento.`
 
-## 6.6 Reagendar agendamento
+### 6.6 Reagendar agendamento
 **Estados de UI:**
 - `selecting_new_slot`: escolha de novo horário.
 - `submitting`: processando reagendamento.
@@ -233,24 +233,24 @@ Fora de escopo (neste ciclo):
 
 ## 8. Validação com Stakeholders
 
-## 8.1 Stakeholders e responsabilidades
+### 8.1 Stakeholders e responsabilidades
 - **Clínica (assistencial):** valida aderência ao fluxo de atendimento.
 - **Operação (recepção/central):** valida usabilidade, exceções e SLAs.
 - **Jurídico/LGPD:** valida base legal, privacidade e retenção de dados.
 
-## 8.2 Roteiro de validação
+### 8.2 Roteiro de validação
 1. Revisão assíncrona do documento por cada área.
 2. Workshop conjunto para resolução de conflitos de regra.
 3. Formalização dos parâmetros de política (X, Y, N e exceções).
 4. Aprovação final com registro de versão.
 
-## 8.3 Critérios de aceite
+### 8.3 Critérios de aceite
 - Fluxos principais aprovados sem pendências críticas.
 - Regras de janela, conflito e cancelamento/no-show parametrizadas.
 - Mensagens de erro/UI aprovadas por operação e produto.
 - Parecer jurídico/LGPD favorável às práticas de tratamento de dados.
 
-## 8.4 Status de validação
+### 8.4 Status de validação
 - Clínica: **Pendente**
 - Operação: **Pendente**
 - Jurídico/LGPD: **Pendente**
