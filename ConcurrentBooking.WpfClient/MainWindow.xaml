@@ -1,0 +1,128 @@
+<Window x:Class="ConcurrentBooking.WpfClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Loaded="MainWindow_OnLoaded"
+        Title="Concurrent Booking Client" Height="760" Width="900">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16">
+
+            <TextBlock FontSize="20" FontWeight="SemiBold" Text="Concurrent Booking Client" Margin="0,0,0,12"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                <TextBlock VerticalAlignment="Center" Width="120" Text="API Base URL"/>
+                <TextBox x:Name="ApiBaseUrlTextBox" Width="360" Text="http://localhost:5000/"/>
+            </StackPanel>
+
+            <GroupBox Header="Cadastro de Slot" Margin="0,0,0,16">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="260"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="260"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Médico/Recurso"/>
+                    <ComboBox x:Name="CreateSlotDoctorComboBox" Grid.Row="0" Grid.Column="1" Margin="0,0,8,8">
+                        <ComboBoxItem Content="Dra. Ana Costa - Clínica Geral"/>
+                        <ComboBoxItem Content="Dr. Bruno Lima - Cardiologia"/>
+                        <ComboBoxItem Content="Dra. Carla Souza - Pediatria"/>
+                        <ComboBoxItem Content="Dr. Diego Rocha - Ortopedia"/>
+                        <ComboBoxItem Content="Dra. Elisa Martins - Dermatologia"/>
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Text="SeatCode"/>
+                    <TextBox x:Name="CreateSlotSeatCodeTextBox" Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" Text="S01"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Data"/>
+                    <DatePicker x:Name="CreateSlotDatePicker" Grid.Row="1" Grid.Column="1" Margin="0,0,8,8"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="Horário"/>
+                    <ComboBox x:Name="CreateSlotTimeComboBox" Grid.Row="1" Grid.Column="3" Margin="0,0,0,8">
+                        <ComboBoxItem Content="08:00"/>
+                        <ComboBoxItem Content="09:00"/>
+                        <ComboBoxItem Content="10:00"/>
+                        <ComboBoxItem Content="11:00"/>
+                        <ComboBoxItem Content="14:00"/>
+                        <ComboBoxItem Content="15:00"/>
+                        <ComboBoxItem Content="16:00"/>
+                        <ComboBoxItem Content="17:00"/>
+                    </ComboBox>
+
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="4" Orientation="Horizontal">
+                        <Button x:Name="CreateSlotButton" Width="140" Margin="0,0,12,0" Content="Criar Slot" Click="CreateSlotButton_OnClick"/>
+                        <Button x:Name="RefreshSlotsButton" Width="140" Content="Atualizar Slots" Click="RefreshSlotsButton_OnClick"/>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+
+            <GroupBox Header="Slots cadastrados" Margin="0,0,0,16">
+                <DataGrid x:Name="SlotsDataGrid"
+                          Height="220"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionChanged="SlotsDataGrid_OnSelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="SlotId" Binding="{Binding Id}" Width="2*"/>
+                        <DataGridTextColumn Header="Recurso" Binding="{Binding ResourceName}" Width="2*"/>
+                        <DataGridTextColumn Header="Início" Binding="{Binding StartsAt}" Width="*"/>
+                        <DataGridTextColumn Header="Fim" Binding="{Binding EndsAt}" Width="*"/>
+                        <DataGridTextColumn Header="SeatCode" Binding="{Binding SeatCode}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </GroupBox>
+
+            <GroupBox Header="Reserva / Confirmação">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="SlotId"/>
+                    <TextBox x:Name="SlotIdTextBox" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="HoldId"/>
+                    <TextBox x:Name="HoldIdTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="CustomerId"/>
+                    <TextBox x:Name="CustomerIdTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="Idempotency Key"/>
+                    <TextBox x:Name="IdempotencyKeyTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8"/>
+
+                    <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,8">
+                        <Button x:Name="CreateHoldButton" Width="180" Margin="0,0,12,0" Content="Criar Hold" Click="CreateHoldButton_OnClick"/>
+                        <Button x:Name="ConfirmHoldButton" Width="180" Content="Confirmar Hold" Click="ConfirmHoldButton_OnClick"/>
+                    </StackPanel>
+
+                    <TextBox Grid.Row="5"
+                             Grid.ColumnSpan="2"
+                             x:Name="ResultTextBox"
+                             Height="140"
+                             IsReadOnly="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             AcceptsReturn="True"/>
+                </Grid>
+            </GroupBox>
+
+        </StackPanel>
+    </ScrollViewer>
+</Window>

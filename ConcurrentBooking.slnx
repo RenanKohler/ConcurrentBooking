@@ -11,4 +11,5 @@
   <Folder Name="/tests/">
     <Project Path="ConcurrentBooking.Tests/ConcurrentBooking.Tests.csproj" />
   </Folder>
+  <Project Path="ConcurrentBooking.WpfClient/ConcurrentBooking.WpfClient.csproj" />
 </Solution>

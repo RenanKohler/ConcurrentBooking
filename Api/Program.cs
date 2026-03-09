@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
+using ConcurrentBooking.Domain.Entities;
 using ConcurrentBooking.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api
 {
@@ -9,12 +10,12 @@ namespace Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
             builder.Services.AddControllers();
-            // Application and infrastructure wiring (Postgres EF Core)
-            var conn = builder.Configuration.GetConnectionString("Default") ?? "Host=localhost;Database=concurrent_booking;Username=postgres;Password=postgres";
-            builder.Services.AddDbContext<ConcurrentBooking.Infrastructure.Data.BookingDbContext>(options => options.UseNpgsql(conn));
+
+            var conn = builder.Configuration.GetConnectionString("Default")
+                ?? "Host=localhost;Database=concurrent_booking;Username=postgres;Password=postgres";
+
+            builder.Services.AddDbContext<BookingDbContext>(options => options.UseNpgsql(conn));
 
             builder.Services.AddScoped<ConcurrentBooking.Application.Repositories.ISlotRepository, ConcurrentBooking.Infrastructure.Repositories.EfSlotRepository>();
             builder.Services.AddScoped<ConcurrentBooking.Application.Repositories.IHoldRepository, ConcurrentBooking.Infrastructure.Repositories.EfHoldRepository>();
@@ -24,31 +25,32 @@ namespace Api
             builder.Services.AddTransient<ConcurrentBooking.Application.UseCases.HoldSlotHandler>();
             builder.Services.AddTransient<ConcurrentBooking.Application.UseCases.ConfirmBookingHandler>();
             builder.Services.AddHostedService<Api.Services.HoldExpirationService>();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
 
-            // Apply EF Core migrations at startup
             using (var scope = app.Services.CreateScope())
             {
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
                 try
                 {
                     var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+
                     logger.LogInformation("Applying database migrations...");
                     db.Database.Migrate();
                     logger.LogInformation("Database migrations applied.");
+
+                    SeedInitialSlots(db, logger);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Failed to apply database migrations");
+                    logger.LogError(ex, "Failed during database startup.");
                     throw;
                 }
             }
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -56,15 +58,51 @@ namespace Api
             }
 
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
-            // Idempotency middleware should run before controllers
             app.UseMiddleware<Api.Middleware.IdempotencyMiddleware>();
-
             app.MapControllers();
-
             app.Run();
+        }
+
+        private static void SeedInitialSlots(BookingDbContext db, ILogger logger)
+        {
+            if (db.Slots.Any())
+            {
+                logger.LogInformation("Slots already exist. Seed skipped.");
+                return;
+            }
+
+            var doctors = new[]
+            {
+                "Dra. Ana Costa - Clínica Geral",
+                "Dr. Bruno Lima - Cardiologia",
+                "Dra. Carla Souza - Pediatria",
+                "Dr. Diego Rocha - Ortopedia",
+                "Dra. Elisa Martins - Dermatologia"
+            };
+
+            var baseStart = DateTime.UtcNow.Date.AddDays(1).AddHours(8);
+
+            var resources = doctors.Select(d => new Resource(d)).ToList();
+            var slots = new List<Slot>();
+
+            for (var i = 0; i < resources.Count; i++)
+            {
+                var startsAt = baseStart.AddHours(i);
+                slots.Add(new Slot
+                {
+                    ResourceId = resources[i].Id,
+                    StartsAt = startsAt,
+                    EndsAt = startsAt.AddMinutes(30),
+                    SeatCode = $"S{i + 1:00}"
+                });
+            }
+
+            db.Resources.AddRange(resources);
+            db.Slots.AddRange(slots);
+            db.SaveChanges();
+
+            logger.LogInformation("Seed completed with {Count} slots.", slots.Count);
         }
     }
 }

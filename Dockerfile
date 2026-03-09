@@ -2,12 +2,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy everything and restore
+# Copy everything and restore only API graph
 COPY . ./
-RUN dotnet restore
+RUN dotnet restore Api/ConcurrentBooking.Api.csproj
 
-# Publish the API project
-RUN dotnet publish Api/ConcurrentBooking.Api.csproj -c Release -o /app/publish
+# Publish API
+RUN dotnet publish Api/ConcurrentBooking.Api.csproj -c Release -o /app/publish --no-restore
 
 # Runtime image (use SDK so migrations can run)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS runtime
@@ -20,6 +20,7 @@ COPY --from=build /src /src
 
 # Copy entrypoint script
 COPY entrypoint.sh ./entrypoint.sh
+RUN sed -i 's/\r$//' ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
 ENV DOTNET_MODIFIABLE_ASSEMBLIES=debug

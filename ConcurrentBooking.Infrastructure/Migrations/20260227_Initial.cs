@@ -1,10 +1,14 @@
 using System;
+using ConcurrentBooking.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace ConcurrentBooking.Infrastructure.Migrations
 {
+    [DbContext(typeof(BookingDbContext))]
+    [Migration("20260227_Initial")]
     public partial class Initial : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
