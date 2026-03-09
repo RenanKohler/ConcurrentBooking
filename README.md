@@ -1,157 +1,233 @@
 # ConcurrentBooking
 
-A production-grade slot-booking API that demonstrates **real concurrency guarantees** under high contention: anti-overbooking, idempotency, and automatic hold expiration; all backed by PostgreSQL, not in-memory tricks.
+ConcurrentBooking is an ASP.NET Core API plus a WPF client that demonstrates two things at once:
 
----
+- clinical slot discovery for appointment booking
+- real concurrency guarantees for `hold -> confirm` booking under contention
+
+The current baseline is a clinical scheduling demo with seeded specialties, units, professionals, and future slots. Availability is read through HTTP APIs, while the write path is still the contention-safe booking core backed by PostgreSQL constraints.
+
+## Current capabilities
+
+- Search specialties with `GET /api/specialties`
+- Search clinic units with `GET /api/units`
+- Search professionals by specialty, date, and optional unit with `GET /api/professionals`
+- Load available slots by professional, date, period, and unit with `GET /api/professionals/{professionalId}/availability`
+- Create a temporary hold with `POST /api/slots/{slotId}/hold`
+- Confirm a booking with `POST /api/holds/{holdId}/confirm`
+- Expire stale holds in the background
+- Replay idempotent HTTP responses when the `Idempotency-Key` header is reused
 
 ## Guarantees
 
 | Guarantee | Mechanism |
 |---|---|
-| **Anti-overbooking** | `UNIQUE` constraint on `bookings.SlotId` ; the DB is the final arbiter, not application-level locks |
-| **Single active hold per slot** | Partial unique index `idx_holds_slot_active` on `holds(SlotId) WHERE Status = 0` (Postgres) |
-| **Idempotency** | HTTP `Idempotency-Key` header handled by `IdempotencyMiddleware`; stores full response, replays on retry |
-| **Hold expiration** | `HoldExpirationService` (BackgroundService) scans every 30 s and transitions stale Active → Expired holds |
-| **DB-level request deduplication** | `RequestId UNIQUE` on both `holds` and `bookings` as a secondary safety net |
+| Anti-overbooking | `UNIQUE` constraint on `bookings.SlotId` |
+| Single active hold per slot | partial unique index `idx_holds_slot_active` on `holds(SlotId)` where `Status = 0` |
+| Hold expiration | `HoldExpirationService` transitions expired active holds to `Expired` |
+| Request deduplication | `RequestId` uniqueness on `holds` and `bookings` |
+| HTTP idempotency replay | `IdempotencyMiddleware` stores and replays responses by route + `Idempotency-Key` header |
 
----
+The database is the final arbiter for booking conflicts. Application checks are only a fast pre-check.
 
-## Flow: Hold → Confirm
+## Clinical model
 
+The generic `Resource` model is no longer the source of truth. The current schema uses:
+
+- `Specialty`
+- `ClinicUnit`
+- `Professional`
+- `Slot` linked to `ProfessionalId` and `ClinicUnitId`
+- `Hold`
+- `Booking`
+- `IdempotencyRecord`
+
+Demo data is seeded automatically on startup for local development.
+
+## API surface
+
+### Read endpoints
+
+- `GET /api/specialties`
+- `GET /api/units`
+- `GET /api/professionals?specialtyId={guid}&date={yyyy-MM-dd}&unitId={guid?}`
+- `GET /api/professionals/{professionalId}/availability?date={yyyy-MM-dd}&period=Morning|Afternoon|Evening&unitId={guid}`
+
+Availability periods:
+
+- `Morning`: 06:00-11:59
+- `Afternoon`: 12:00-17:59
+- `Evening`: 18:00-22:59
+
+### Write endpoints
+
+- `POST /api/slots/{slotId}/hold`
+- `POST /api/holds/{holdId}/confirm`
+
+Current request contracts are documented exactly as implemented today:
+
+`POST /api/slots/{slotId}/hold`
+
+```json
+{
+  "customerId": "00000000-0000-0000-0000-000000000000",
+  "idempotencyKey": "hold-request-key"
+}
 ```
-Client                      API                           PostgreSQL
-  │                           │                               │
-  │─POST /slots/{id}/hold────▶│                               │
-  │  Idempotency-Key: <key>   │─INSERT holds (Active)────────▶│
-  │                           │  ← constraint: 1 active/slot  │
-  │◀─201 { holdId, expiresAt }│                               │
-  │                           │                               │
-  │  (within TTL = 30 s)      │                               │
-  │                           │                               │
-  │─POST /holds/{id}/confirm─▶│                               │
-  │  Idempotency-Key: <key>   │─INSERT bookings──────────────▶│
-  │                           │  ← UNIQUE(SlotId) blocks race │
-  │◀─201 { bookingId }────────│  UPDATE holds SET Status=1    │
-  │                           │                               │
-  │  (retry same key)         │                               │
-  │─POST /holds/{id}/confirm─▶│                               │
-  │  Idempotency-Key: <key>   │─Middleware replay (no DB hit)─│
-  │◀─201 { bookingId } ───────│                               │
+
+Success response:
+
+```json
+{
+  "holdId": "00000000-0000-0000-0000-000000000000",
+  "expiresAt": "2026-03-10T12:00:00Z"
+}
 ```
 
-If two clients race the confirm step, the second `INSERT` violates the `UNIQUE(bookings.SlotId)` constraint and the API returns **409 Conflict**.
+`POST /api/holds/{holdId}/confirm`
 
----
+```json
+{
+  "customerId": "00000000-0000-0000-0000-000000000000",
+  "idempotencyKey": "confirm-request-key"
+}
+```
+
+Success response:
+
+```json
+{
+  "bookingId": "00000000-0000-0000-0000-000000000000"
+}
+```
+
+Notes about idempotency:
+
+- The request body currently carries `idempotencyKey` for the application/use-case layer.
+- The optional `Idempotency-Key` HTTP header is what activates middleware-level response replay.
+- To reproduce the current full behavior, send both.
 
 ## Running locally
 
-**Prerequisites:** Docker + Docker Compose
+Prerequisites:
+
+- Docker
+- Docker Compose
+- .NET SDK 8 or newer
+
+The current demo migration path is development-oriented. If you already ran an older version of the project, recreate the local database volume before starting again.
 
 ```bash
-# Start Postgres + API
-docker-compose up --build
-
-# API will be available at http://localhost:5000
-# Swagger UI at http://localhost:5000/swagger
+docker compose down -v
+docker compose up --build
 ```
 
-### Seed a slot, then create a hold
+After startup:
+
+- API: `http://localhost:5000`
+- Swagger UI: `http://localhost:5000/swagger`
+
+## Demo flow
+
+The API seeds specialties, units, professionals, and future slots automatically. A typical clinical flow is:
+
+1. Load specialties.
+2. Load units.
+3. Search professionals by specialty and date.
+4. Load availability for a selected professional, unit, date, and period.
+5. Create a hold for one available slot.
+6. Confirm the hold.
+
+Example:
 
 ```bash
-# 1. Insert a resource + slot directly via psql (or add a seed endpoint)
-docker exec -it <postgres-container> psql -U postgres -d concurrent_booking
+curl http://localhost:5000/api/specialties
+curl http://localhost:5000/api/units
+curl "http://localhost:5000/api/professionals?specialtyId=<specialtyId>&date=2026-03-10"
+curl "http://localhost:5000/api/professionals/<professionalId>/availability?date=2026-03-10&period=Morning&unitId=<unitId>"
 
-# 2. Hold a slot
-curl -X POST http://localhost:5000/api/slots/{slotId}/hold \
+curl -X POST http://localhost:5000/api/slots/<slotId>/hold \
   -H "Content-Type: application/json" \
-  -H "Idempotency-Key: my-unique-key-1" \
-  -d '{"customerId":"<guid>"}'
+  -H "Idempotency-Key: hold-http-key" \
+  -d '{"customerId":"<customer-guid>","idempotencyKey":"hold-request-key"}'
 
-# 3. Confirm the booking
-curl -X POST http://localhost:5000/api/holds/{holdId}/confirm \
+curl -X POST http://localhost:5000/api/holds/<holdId>/confirm \
   -H "Content-Type: application/json" \
-  -H "Idempotency-Key: my-unique-key-2" \
-  -d '{"customerId":"<guid>"}'
+  -H "Idempotency-Key: confirm-http-key" \
+  -d '{"customerId":"<customer-guid>","idempotencyKey":"confirm-request-key"}'
 ```
 
----
+## WPF client
 
-## Running the tests
-
-### Unit tests (in-memory, no Docker needed)
+The WPF client now mirrors the implemented clinical flow instead of manual slot CRUD.
 
 ```bash
-dotnet test --filter "FullyQualifiedName~ConcurrencyTests"
+dotnet run --project ConcurrentBooking.WpfClient
 ```
 
-### Integration / stress tests (requires Docker)
+The client lets you:
 
-The integration tests use **Testcontainers** to spin up a real PostgreSQL instance automatically ; no manual setup needed.
+- choose specialty
+- optionally narrow by unit
+- pick date and period
+- load matching professionals
+- load available slots for the selected professional
+- create hold and confirm booking using the selected slot
+
+Default API base URL in the client is `http://localhost:5000/`.
+
+## Tests
+
+Build:
 
 ```bash
-dotnet test --filter "FullyQualifiedName~ConcurrencyIntegrationTests"
+dotnet build
 ```
 
-**What the stress tests prove:**
-
-- `OnlyOneHoldSucceedsWhen100ConcurrentHoldRequestsRace` ; 100 tasks race to hold the same slot; exactly 1 wins via the Postgres partial unique index.
-- `OnlyOneBookingSucceedsWhen100ConcurrentConfirmRequestsRace` ; 100 tasks race to confirm the same hold; exactly 1 booking is created via the `UNIQUE(bookings.SlotId)` constraint.
-- `ConfirmAfterHoldExpiredReturnsError` ; confirms that a 1 ms TTL hold correctly blocks confirmation.
-
-### Coverage
+Non-Docker baseline:
 
 ```bash
-dotnet tool install -g dotnet-coverage   # one-time
-dotnet-coverage collect -f cobertura -o coverage.cobertura.xml dotnet test
+dotnet test --filter "FullyQualifiedName!~ConcurrentBooking.Tests.Integration.ConcurrencyIntegrationTests"
 ```
 
----
+This covers:
 
-## Architecture decisions
+- unit tests for availability filtering
+- non-Docker concurrency tests with in-memory repositories
+- HTTP integration tests with `WebApplicationFactory`
 
-### Why DB constraints instead of in-memory locks?
+Docker-backed PostgreSQL concurrency tests:
 
-| Approach | In-memory lock / `ConcurrentDictionary` | **DB constraint (chosen)** |
-|---|---|---|
-| Multi-instance safe | ❌ No ; each pod has its own memory | ✅ Yes ; single source of truth |
-| Survives restart | ❌ No | ✅ Yes |
-| Throughput | High (no I/O) | High (index seek, no row scan) |
-| Correctness proof | Hard to reason about | Declarative ; the DB spec defines it |
+```bash
+dotnet test --filter "FullyQualifiedName~ConcurrentBooking.Tests.Integration.ConcurrencyIntegrationTests"
+```
 
-The `UNIQUE` constraint on `bookings.SlotId` and the partial index `idx_holds_slot_active` are the **only** places that need to be correct. Everything else is defense-in-depth.
+These verify:
 
-### Why a Middleware for idempotency instead of handler logic?
-
-Idempotency is a **cross-cutting concern**, not business logic. Putting it in the middleware:
-
-- Keeps handlers focused on domain rules.
-- Applies uniformly to every mutating endpoint without duplication.
-- Enables richer replay (full HTTP status + body) without the handler knowing about it.
-
-### Hold TTL and expiration
-
-Holds expire after **30 seconds** by default. `HoldExpirationService` runs every 30 seconds and bulk-updates stale `Active` holds to `Expired`. This releases the partial unique index, allowing a new hold on the same slot. The service creates its own DI scope per tick to avoid long-lived `DbContext` instances.
-
----
+- only one hold wins under 100 concurrent hold attempts
+- only one booking wins under 100 concurrent confirm attempts
+- expired holds cannot be confirmed
 
 ## Project structure
 
-```
+```text
 ConcurrentBooking.Domain/         Domain entities and invariants
-ConcurrentBooking.Application/    Use-case handlers, repository interfaces, DTOs
-ConcurrentBooking.Infrastructure/ EF Core repositories, migrations, BookingDbContext
-Api/                              ASP.NET Core controllers, IdempotencyMiddleware, HoldExpirationService
-ConcurrentBooking.Tests/          Unit tests (in-memory) + Integration stress tests (Testcontainers)
+ConcurrentBooking.Application/    Use cases, DTOs, discovery contracts
+ConcurrentBooking.Infrastructure/ EF Core, repositories, migrations, discovery service
+Api/                              ASP.NET Core host, controllers, middleware, seed/init services
+ConcurrentBooking.WpfClient/      Desktop client for discovery + hold/confirm flow
+ConcurrentBooking.Tests/          Unit, HTTP integration, and PostgreSQL concurrency tests
+docs/                             Functional requirements and supporting docs
 ```
 
----
+## References
 
-## Roadmap
+- Functional requirements: `docs/documento-requisitos-agendamento.md`
+- Local infrastructure: `docker-compose.yml`
 
-| Priority | Item |
-|---|---|
-| P1 | Outbox pattern for `BookingConfirmed` / `HoldExpired` domain events |
-| P1 | OpenTelemetry tracing + structured logging with correlation-id |
-| P1 | Rate limiting per `customerId` to prevent hold-spam |
-| P2 | Redis distributed lock for ultra-hot slots (single-writer pattern) |
-| P2 | CQRS read model ; optimized availability query without touching the write tables |
+## Next backlog
+
+- scheduling policy rules such as min/max booking window and patient conflict validation
+- cancel and reschedule flows
+- authentication, authorization, and receptionist audit trail
+- observability and rate limiting
