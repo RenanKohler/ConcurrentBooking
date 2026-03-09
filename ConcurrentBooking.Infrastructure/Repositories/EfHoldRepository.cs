@@ -24,6 +24,11 @@ public class EfHoldRepository : IHoldRepository
         await _db.SaveChangesAsync();
     }
 
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        return _db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<Hold?> GetByIdAsync(Guid id)
     {
         return await _db.Holds.FirstOrDefaultAsync(h => h.Id == id);

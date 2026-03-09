@@ -15,7 +15,15 @@ namespace ConcurrentBooking.Infrastructure.Repositories
         public InMemorySlotRepository()
         {
             // for MVP create a sample slot
-            var slot = new Slot { Id = Guid.NewGuid(), ResourceId = Guid.NewGuid(), StartsAt = DateTime.UtcNow, EndsAt = DateTime.UtcNow.AddHours(1), SeatCode = "A1" };
+            var slot = new Slot
+            {
+                Id = Guid.NewGuid(),
+                ProfessionalId = Guid.NewGuid(),
+                ClinicUnitId = Guid.NewGuid(),
+                StartsAt = DateTime.UtcNow,
+                EndsAt = DateTime.UtcNow.AddHours(1),
+                SeatCode = "A1"
+            };
             _store[slot.Id] = slot;
             SeededSlotId = slot.Id;
         }

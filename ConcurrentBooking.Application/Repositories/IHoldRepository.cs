@@ -11,6 +11,8 @@ namespace ConcurrentBooking.Application.Repositories
 
         Task AddAsync(Hold hold);
 
+        Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
         Task RemoveAsync(Guid id);
 
         Task<bool> ExistsActiveHoldForSlotAsync(Guid slotId);

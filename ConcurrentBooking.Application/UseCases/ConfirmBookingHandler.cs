@@ -36,6 +36,7 @@ namespace ConcurrentBooking.Application.UseCases
             await _bookingRepo.AddAsync(booking);
 
             hold.MarkConsumed();
+            await _holdRepo.SaveChangesAsync();
 
             return new ConfirmBookingResult(booking.Id);
         }

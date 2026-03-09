@@ -5,18 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Loaded="MainWindow_OnLoaded"
-        Title="Concurrent Booking Client" Height="760" Width="900">
+        Title="Clinical Booking Client" Height="860" Width="980">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="16">
 
-            <TextBlock FontSize="20" FontWeight="SemiBold" Text="Concurrent Booking Client" Margin="0,0,0,12"/>
+            <TextBlock FontSize="20" FontWeight="SemiBold" Text="Clinical Booking Client" Margin="0,0,0,12"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                 <TextBlock VerticalAlignment="Center" Width="120" Text="API Base URL"/>
                 <TextBox x:Name="ApiBaseUrlTextBox" Width="360" Text="http://localhost:5000/"/>
             </StackPanel>
 
-            <GroupBox Header="Cadastro de Slot" Margin="0,0,0,16">
+            <GroupBox Header="Busca clinica" Margin="0,0,0,16">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="140"/>
@@ -30,57 +30,58 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Médico/Recurso"/>
-                    <ComboBox x:Name="CreateSlotDoctorComboBox" Grid.Row="0" Grid.Column="1" Margin="0,0,8,8">
-                        <ComboBoxItem Content="Dra. Ana Costa - Clínica Geral"/>
-                        <ComboBoxItem Content="Dr. Bruno Lima - Cardiologia"/>
-                        <ComboBoxItem Content="Dra. Carla Souza - Pediatria"/>
-                        <ComboBoxItem Content="Dr. Diego Rocha - Ortopedia"/>
-                        <ComboBoxItem Content="Dra. Elisa Martins - Dermatologia"/>
-                    </ComboBox>
+                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Especialidade"/>
+                    <ComboBox x:Name="SpecialtyComboBox" Grid.Row="0" Grid.Column="1" Margin="0,0,8,8" DisplayMemberPath="Name"/>
 
-                    <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Text="SeatCode"/>
-                    <TextBox x:Name="CreateSlotSeatCodeTextBox" Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" Text="S01"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Text="Unidade"/>
+                    <ComboBox x:Name="UnitComboBox" Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" DisplayMemberPath="Name"/>
 
                     <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Data"/>
-                    <DatePicker x:Name="CreateSlotDatePicker" Grid.Row="1" Grid.Column="1" Margin="0,0,8,8"/>
+                    <DatePicker x:Name="AvailabilityDatePicker" Grid.Row="1" Grid.Column="1" Margin="0,0,8,8"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="Horário"/>
-                    <ComboBox x:Name="CreateSlotTimeComboBox" Grid.Row="1" Grid.Column="3" Margin="0,0,0,8">
-                        <ComboBoxItem Content="08:00"/>
-                        <ComboBoxItem Content="09:00"/>
-                        <ComboBoxItem Content="10:00"/>
-                        <ComboBoxItem Content="11:00"/>
-                        <ComboBoxItem Content="14:00"/>
-                        <ComboBoxItem Content="15:00"/>
-                        <ComboBoxItem Content="16:00"/>
-                        <ComboBoxItem Content="17:00"/>
-                    </ComboBox>
+                    <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="Periodo"/>
+                    <ComboBox x:Name="PeriodComboBox" Grid.Row="1" Grid.Column="3" Margin="0,0,0,8"/>
 
                     <StackPanel Grid.Row="2" Grid.ColumnSpan="4" Orientation="Horizontal">
-                        <Button x:Name="CreateSlotButton" Width="140" Margin="0,0,12,0" Content="Criar Slot" Click="CreateSlotButton_OnClick"/>
-                        <Button x:Name="RefreshSlotsButton" Width="140" Content="Atualizar Slots" Click="RefreshSlotsButton_OnClick"/>
+                        <Button x:Name="SearchProfessionalsButton"
+                                Width="180"
+                                Margin="0,0,12,0"
+                                Content="Buscar profissionais"
+                                Click="SearchProfessionalsButton_OnClick"/>
                     </StackPanel>
                 </Grid>
             </GroupBox>
 
-            <GroupBox Header="Slots cadastrados" Margin="0,0,0,16">
-                <DataGrid x:Name="SlotsDataGrid"
+            <GroupBox Header="Profissionais" Margin="0,0,0,16">
+                <DataGrid x:Name="ProfessionalsDataGrid"
                           Height="220"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
-                          SelectionChanged="SlotsDataGrid_OnSelectionChanged">
+                          SelectionChanged="ProfessionalsDataGrid_OnSelectionChanged">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="SlotId" Binding="{Binding Id}" Width="2*"/>
-                        <DataGridTextColumn Header="Recurso" Binding="{Binding ResourceName}" Width="2*"/>
-                        <DataGridTextColumn Header="Início" Binding="{Binding StartsAt}" Width="*"/>
-                        <DataGridTextColumn Header="Fim" Binding="{Binding EndsAt}" Width="*"/>
-                        <DataGridTextColumn Header="SeatCode" Binding="{Binding SeatCode}" Width="*"/>
+                        <DataGridTextColumn Header="Profissional" Binding="{Binding ProfessionalName}" Width="2*"/>
+                        <DataGridTextColumn Header="Especialidade" Binding="{Binding SpecialtyName}" Width="2*"/>
+                        <DataGridTextColumn Header="Unidade" Binding="{Binding ClinicUnitName}" Width="2*"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </GroupBox>
 
-            <GroupBox Header="Reserva / Confirmação">
+            <GroupBox Header="Horarios disponiveis" Margin="0,0,0,16">
+                <DataGrid x:Name="AvailabilityDataGrid"
+                          Height="220"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionChanged="AvailabilityDataGrid_OnSelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="SlotId" Binding="{Binding SlotId}" Width="2*"/>
+                        <DataGridTextColumn Header="Inicio" Binding="{Binding StartsAt}" Width="*"/>
+                        <DataGridTextColumn Header="Fim" Binding="{Binding EndsAt}" Width="*"/>
+                        <DataGridTextColumn Header="Sala" Binding="{Binding SeatCode}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </GroupBox>
+
+            <GroupBox Header="Reserva / Confirmacao">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="140"/>

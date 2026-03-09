@@ -22,9 +22,16 @@ public class IdempotencyMiddleware
 
     public async Task InvokeAsync(HttpContext context, IIdempotencyRepository idemRepo)
     {
-        if (!context.Request.Headers.TryGetValue("Idempotency-Key", out var key) || string.IsNullOrWhiteSpace(key))
+        if (!context.Request.Headers.TryGetValue("Idempotency-Key", out var keyValues))
         {
             // continue without idempotency for endpoints that don't provide a key
+            await _next(context);
+            return;
+        }
+
+        var key = keyValues.ToString();
+        if (string.IsNullOrWhiteSpace(key))
+        {
             await _next(context);
             return;
         }

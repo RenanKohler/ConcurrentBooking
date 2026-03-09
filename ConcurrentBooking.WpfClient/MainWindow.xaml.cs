@@ -11,9 +11,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        CreateSlotDoctorComboBox.SelectedIndex = 0;
-        CreateSlotDatePicker.SelectedDate = DateTime.Today.AddDays(1);
-        CreateSlotTimeComboBox.SelectedIndex = 0;
+        AvailabilityDatePicker.SelectedDate = DateTime.Today.AddDays(1);
+        PeriodComboBox.ItemsSource = Enum.GetValues<AvailabilityPeriod>();
+        PeriodComboBox.SelectedIndex = 0;
 
         CustomerIdTextBox.Text = Guid.NewGuid().ToString();
         IdempotencyKeyTextBox.Text = Guid.NewGuid().ToString("N");
@@ -21,63 +21,60 @@ public partial class MainWindow : Window
 
     private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
-        await ExecuteAsync(LoadSlotsAsync);
+        await ExecuteAsync(LoadReferenceDataAsync);
     }
 
-    private async void CreateSlotButton_OnClick(object sender, RoutedEventArgs e)
+    private async void SearchProfessionalsButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (CreateSlotDoctorComboBox.SelectedItem is not ComboBoxItem doctorItem)
+        if (SpecialtyComboBox.SelectedItem is not SpecialtyListItem specialty || !AvailabilityDatePicker.SelectedDate.HasValue)
         {
-            WriteResult("Selecione o médico/recurso.");
-            return;
-        }
-
-        if (!CreateSlotDatePicker.SelectedDate.HasValue)
-        {
-            WriteResult("Selecione a data do slot.");
-            return;
-        }
-
-        if (CreateSlotTimeComboBox.SelectedItem is not ComboBoxItem timeItem ||
-            !TimeSpan.TryParse(timeItem.Content?.ToString(), out var time))
-        {
-            WriteResult("Selecione um horário válido.");
+            WriteResult("Selecione especialidade e data para buscar profissionais.");
             return;
         }
 
         if (!TryCreateClient(out var client))
+        {
             return;
+        }
 
-        var startsAt = CreateSlotDatePicker.SelectedDate.Value.Date.Add(time);
-        var endsAt = startsAt.AddMinutes(30);
-        var doctorName = doctorItem.Content?.ToString() ?? string.Empty;
-        var seatCode = string.IsNullOrWhiteSpace(CreateSlotSeatCodeTextBox.Text) ? null : CreateSlotSeatCodeTextBox.Text.Trim();
+        var date = DateOnly.FromDateTime(AvailabilityDatePicker.SelectedDate.Value);
+        var selectedUnit = UnitComboBox.SelectedItem as UnitFilterOption;
 
         await ExecuteAsync(async cancellationToken =>
         {
-            var result = await client.CreateSlotAsync(doctorName, startsAt, endsAt, seatCode, cancellationToken);
+            var result = await client.GetProfessionalsAsync(specialty.Id, date, selectedUnit?.Id, cancellationToken);
             if (!result.IsSuccess || result.Data is null)
             {
-                WriteResult($"Erro ao criar slot: {result.Error}");
+                WriteResult($"Erro ao buscar profissionais: {result.Error}");
                 return;
             }
 
-            SlotIdTextBox.Text = result.Data.Id.ToString();
-            await LoadSlotsAsync(cancellationToken);
-            WriteResult($"Slot criado com sucesso. SlotId: {result.Data.Id}");
+            ProfessionalsDataGrid.ItemsSource = result.Data;
+            AvailabilityDataGrid.ItemsSource = null;
+            SlotIdTextBox.Clear();
+            HoldIdTextBox.Clear();
+
+            WriteResult(result.Data.Count == 0
+                ? "Nenhum profissional encontrado para os filtros selecionados."
+                : $"{result.Data.Count} profissionais encontrados.");
         });
     }
 
-    private async void RefreshSlotsButton_OnClick(object sender, RoutedEventArgs e)
+    private async void ProfessionalsDataGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        await ExecuteAsync(LoadSlotsAsync);
+        if (ProfessionalsDataGrid.SelectedItem is not ProfessionalSearchItem professional)
+        {
+            return;
+        }
+
+        await ExecuteAsync(cancellationToken => LoadAvailabilityAsync(professional, cancellationToken));
     }
 
-    private void SlotsDataGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void AvailabilityDataGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (SlotsDataGrid.SelectedItem is SlotDto slot)
+        if (AvailabilityDataGrid.SelectedItem is AvailableSlotItem slot)
         {
-            SlotIdTextBox.Text = slot.Id.ToString();
+            SlotIdTextBox.Text = slot.SlotId.ToString();
         }
     }
 
@@ -94,14 +91,19 @@ public partial class MainWindow : Window
         await ExecuteAsync(async cancellationToken =>
         {
             var result = await client.CreateHoldAsync(slotId, customerId, idempotencyKey, cancellationToken);
-            if (result.IsSuccess && result.Data is not null)
+            if (!result.IsSuccess || result.Data is null)
             {
-                HoldIdTextBox.Text = result.Data.HoldId.ToString();
-                WriteResult($"Hold criado com sucesso.\nHoldId: {result.Data.HoldId}\nExpira em: {result.Data.ExpiresAt:yyyy-MM-dd HH:mm:ss}");
+                WriteResult($"Erro ao criar hold: {result.Error}");
                 return;
             }
 
-            WriteResult($"Erro ao criar hold: {result.Error}");
+            HoldIdTextBox.Text = result.Data.HoldId.ToString();
+            WriteResult($"Hold criado com sucesso.\nHoldId: {result.Data.HoldId}\nExpira em: {result.Data.ExpiresAt:yyyy-MM-dd HH:mm:ss}");
+
+            if (ProfessionalsDataGrid.SelectedItem is ProfessionalSearchItem professional)
+            {
+                await LoadAvailabilityAsync(professional, cancellationToken);
+            }
         });
     }
 
@@ -118,29 +120,88 @@ public partial class MainWindow : Window
         await ExecuteAsync(async cancellationToken =>
         {
             var result = await client.ConfirmHoldAsync(holdId, customerId, idempotencyKey, cancellationToken);
-            if (result.IsSuccess && result.Data is not null)
+            if (!result.IsSuccess || result.Data is null)
             {
-                WriteResult($"Booking confirmado com sucesso.\nBookingId: {result.Data.BookingId}");
+                WriteResult($"Erro ao confirmar hold: {result.Error}");
                 return;
             }
 
-            WriteResult($"Erro ao confirmar hold: {result.Error}");
+            WriteResult($"Booking confirmado com sucesso.\nBookingId: {result.Data.BookingId}");
+
+            if (ProfessionalsDataGrid.SelectedItem is ProfessionalSearchItem professional)
+            {
+                await LoadAvailabilityAsync(professional, cancellationToken);
+            }
         });
     }
 
-    private async Task LoadSlotsAsync(CancellationToken cancellationToken)
+    private async Task LoadReferenceDataAsync(CancellationToken cancellationToken)
     {
         if (!TryCreateClient(out var client))
-            return;
-
-        var result = await client.GetSlotsAsync(cancellationToken);
-        if (!result.IsSuccess || result.Data is null)
         {
-            WriteResult($"Erro ao carregar slots: {result.Error}");
             return;
         }
 
-        SlotsDataGrid.ItemsSource = result.Data;
+        var specialtiesResult = await client.GetSpecialtiesAsync(cancellationToken);
+        if (!specialtiesResult.IsSuccess || specialtiesResult.Data is null)
+        {
+            WriteResult($"Erro ao carregar especialidades: {specialtiesResult.Error}");
+            return;
+        }
+
+        var unitsResult = await client.GetUnitsAsync(cancellationToken);
+        if (!unitsResult.IsSuccess || unitsResult.Data is null)
+        {
+            WriteResult($"Erro ao carregar unidades: {unitsResult.Error}");
+            return;
+        }
+
+        SpecialtyComboBox.ItemsSource = specialtiesResult.Data;
+        if (specialtiesResult.Data.Count > 0)
+        {
+            SpecialtyComboBox.SelectedIndex = 0;
+        }
+
+        var unitOptions = new List<UnitFilterOption> { new(null, "Todas as unidades") };
+        unitOptions.AddRange(unitsResult.Data.Select(unit => new UnitFilterOption(unit.Id, unit.Name)));
+        UnitComboBox.ItemsSource = unitOptions;
+        UnitComboBox.SelectedIndex = 0;
+
+        WriteResult("Filtros clinicos carregados.");
+    }
+
+    private async Task LoadAvailabilityAsync(ProfessionalSearchItem professional, CancellationToken cancellationToken)
+    {
+        if (!AvailabilityDatePicker.SelectedDate.HasValue)
+        {
+            WriteResult("Selecione uma data para consultar disponibilidade.");
+            return;
+        }
+
+        if (PeriodComboBox.SelectedItem is not AvailabilityPeriod period)
+        {
+            WriteResult("Selecione um periodo valido.");
+            return;
+        }
+
+        if (!TryCreateClient(out var client))
+        {
+            return;
+        }
+
+        var date = DateOnly.FromDateTime(AvailabilityDatePicker.SelectedDate.Value);
+        var result = await client.GetAvailabilityAsync(professional.ProfessionalId, date, period, professional.ClinicUnitId, cancellationToken);
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            WriteResult($"Erro ao carregar disponibilidade: {result.Error}");
+            return;
+        }
+
+        AvailabilityDataGrid.ItemsSource = result.Data;
+        WriteResult(result.Data.Count == 0
+            ? "Nao ha horarios disponiveis para este profissional e periodo."
+            : $"{result.Data.Count} horarios disponiveis carregados.");
     }
 
     private async Task ExecuteAsync(Func<CancellationToken, Task> operation)
@@ -154,11 +215,11 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            WriteResult("A operação excedeu o tempo limite de 15 segundos.");
+            WriteResult("A operacao excedeu o tempo limite de 15 segundos.");
         }
         catch (HttpRequestException ex)
         {
-            WriteResult($"Erro de conexão com a API: {ex.Message}");
+            WriteResult($"Erro de conexao com a API: {ex.Message}");
         }
         finally
         {
@@ -172,7 +233,7 @@ public partial class MainWindow : Window
 
         if (!Uri.TryCreate(ApiBaseUrlTextBox.Text?.Trim(), UriKind.Absolute, out var baseUri))
         {
-            WriteResult("URL base da API inválida.");
+            WriteResult("URL base da API invalida.");
             return false;
         }
 
@@ -189,9 +250,11 @@ public partial class MainWindow : Window
     private bool TryReadGuid(string? value, string fieldName, out Guid parsed)
     {
         if (Guid.TryParse(value, out parsed))
+        {
             return true;
+        }
 
-        WriteResult($"Campo inválido: {fieldName} deve ser um GUID válido.");
+        WriteResult($"Campo invalido: {fieldName} deve ser um GUID valido.");
         return false;
     }
 
@@ -199,22 +262,29 @@ public partial class MainWindow : Window
     {
         parsed = value?.Trim() ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(parsed))
+        {
             return true;
+        }
 
-        WriteResult($"Campo obrigatório: {fieldName}.");
+        WriteResult($"Campo obrigatorio: {fieldName}.");
         return false;
     }
 
     private void ToggleUi(bool enabled)
     {
-        CreateSlotButton.IsEnabled = enabled;
-        RefreshSlotsButton.IsEnabled = enabled;
+        SearchProfessionalsButton.IsEnabled = enabled;
         CreateHoldButton.IsEnabled = enabled;
         ConfirmHoldButton.IsEnabled = enabled;
+        SpecialtyComboBox.IsEnabled = enabled;
+        UnitComboBox.IsEnabled = enabled;
+        AvailabilityDatePicker.IsEnabled = enabled;
+        PeriodComboBox.IsEnabled = enabled;
     }
 
     private void WriteResult(string message)
     {
         ResultTextBox.Text = message;
     }
+
+    private sealed record UnitFilterOption(Guid? Id, string Name);
 }

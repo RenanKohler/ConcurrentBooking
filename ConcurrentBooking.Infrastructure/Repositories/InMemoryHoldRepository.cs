@@ -18,6 +18,11 @@ namespace ConcurrentBooking.Infrastructure.Repositories
             return Task.CompletedTask;
         }
 
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task<Hold?> GetByIdAsync(Guid id)
         {
             _store.TryGetValue(id, out var h);

@@ -25,29 +25,23 @@ public class ConcurrencyIntegrationTests
     private async Task<Guid> SeedSlotAsync()
     {
         await using var ctx = _fixture.CreateContext();
-        var resource = new Resource("Test Room");
+        var specialty = new Specialty("Test Specialty");
+        var unit = new ClinicUnit("Test Unit");
+        var professional = new Professional(specialty.Id, "Test Professional");
         var slot = new Slot
         {
-            ResourceId = resource.Id,
+            ProfessionalId = professional.Id,
+            ClinicUnitId = unit.Id,
             StartsAt = DateTime.UtcNow.AddHours(1),
             EndsAt = DateTime.UtcNow.AddHours(2),
             SeatCode = Guid.NewGuid().ToString("N")[..6]
         };
-        ctx.Resources.Add(resource);
+        ctx.Specialties.Add(specialty);
+        ctx.ClinicUnits.Add(unit);
+        ctx.Professionals.Add(professional);
         ctx.Slots.Add(slot);
         await ctx.SaveChangesAsync();
         return slot.Id;
-    }
-
-    private (HoldSlotHandler hold, ConfirmBookingHandler confirm) BuildHandlers()
-    {
-        var ctx = _fixture.CreateContext();
-        var slotRepo = new EfSlotRepository(ctx);
-        var holdRepo = new EfHoldRepository(ctx);
-        var bookingRepo = new EfBookingRepository(ctx);
-
-        return (new HoldSlotHandler(slotRepo, holdRepo, bookingRepo),
-                new ConfirmBookingHandler(holdRepo, bookingRepo));
     }
 
     // --- tests ---
