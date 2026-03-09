@@ -3,127 +3,460 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:ConcurrentBooking.WpfClient.ViewModels"
         mc:Ignorable="d"
-        Loaded="MainWindow_OnLoaded"
-        Title="Clinical Booking Client" Height="860" Width="980">
+        Title="Concurrent Booking Client"
+        Width="1360"
+        Height="920"
+        MinWidth="1200"
+        MinHeight="860"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.45">
+                        <DoubleAnimation.EasingFunction>
+                            <CubicEase EasingMode="EaseOut"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="16">
+        <Grid Margin="28">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <TextBlock FontSize="20" FontWeight="SemiBold" Text="Clinical Booking Client" Margin="0,0,0,12"/>
+            <!-- ═══════ HEADER ═══════ -->
+            <Border Grid.Row="0" CornerRadius="20" Padding="28">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FF161B22" Offset="0"/>
+                        <GradientStop Color="#FF0D1117" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="{StaticResource BorderColor}"/>
+                </Border.BorderBrush>
+                <Border.BorderThickness>1</Border.BorderThickness>
 
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                <TextBlock VerticalAlignment="Center" Width="120" Text="API Base URL"/>
-                <TextBox x:Name="ApiBaseUrlTextBox" Width="360" Text="http://localhost:5000/"/>
-            </StackPanel>
-
-            <GroupBox Header="Busca clinica" Margin="0,0,0,16">
-                <Grid Margin="10">
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="260"/>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="260"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Especialidade"/>
-                    <ComboBox x:Name="SpecialtyComboBox" Grid.Row="0" Grid.Column="1" Margin="0,0,8,8" DisplayMemberPath="Name"/>
-
-                    <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Text="Unidade"/>
-                    <ComboBox x:Name="UnitComboBox" Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" DisplayMemberPath="Name"/>
-
-                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Data"/>
-                    <DatePicker x:Name="AvailabilityDatePicker" Grid.Row="1" Grid.Column="1" Margin="0,0,8,8"/>
-
-                    <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="Periodo"/>
-                    <ComboBox x:Name="PeriodComboBox" Grid.Row="1" Grid.Column="3" Margin="0,0,0,8"/>
-
-                    <StackPanel Grid.Row="2" Grid.ColumnSpan="4" Orientation="Horizontal">
-                        <Button x:Name="SearchProfessionalsButton"
-                                Width="180"
-                                Margin="0,0,12,0"
-                                Content="Buscar profissionais"
-                                Click="SearchProfessionalsButton_OnClick"/>
-                    </StackPanel>
-                </Grid>
-            </GroupBox>
-
-            <GroupBox Header="Profissionais" Margin="0,0,0,16">
-                <DataGrid x:Name="ProfessionalsDataGrid"
-                          Height="220"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          SelectionChanged="ProfessionalsDataGrid_OnSelectionChanged">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Profissional" Binding="{Binding ProfessionalName}" Width="2*"/>
-                        <DataGridTextColumn Header="Especialidade" Binding="{Binding SpecialtyName}" Width="2*"/>
-                        <DataGridTextColumn Header="Unidade" Binding="{Binding ClinicUnitName}" Width="2*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </GroupBox>
-
-            <GroupBox Header="Horarios disponiveis" Margin="0,0,0,16">
-                <DataGrid x:Name="AvailabilityDataGrid"
-                          Height="220"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          SelectionChanged="AvailabilityDataGrid_OnSelectionChanged">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="SlotId" Binding="{Binding SlotId}" Width="2*"/>
-                        <DataGridTextColumn Header="Inicio" Binding="{Binding StartsAt}" Width="*"/>
-                        <DataGridTextColumn Header="Fim" Binding="{Binding EndsAt}" Width="*"/>
-                        <DataGridTextColumn Header="Sala" Binding="{Binding SeatCode}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </GroupBox>
-
-            <GroupBox Header="Reserva / Confirmacao">
-                <Grid Margin="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="140"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <!-- App icon -->
+                            <TextBlock Text="&#xE787;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="24"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,12,0"/>
+                            <TextBlock Text="Concurrent Booking"
+                                       FontSize="26" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Busque profissionais, confira disponibilidade em tempo real e confirme reservas."
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="13" Margin="0,0,0,18" TextWrapping="Wrap"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="260"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel>
+                                <TextBlock Text="S T A T U S" FontSize="10" FontWeight="Bold"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding StatusMessage}"
+                                           Margin="0,4,0,0" FontSize="14"
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <ProgressBar Grid.Column="1" Margin="24,0,0,0"
+                                         IsIndeterminate="True"
+                                         VerticalAlignment="Center"
+                                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Badge -->
+                    <Border Grid.Column="1" Margin="24,0,0,0" Padding="20,16"
+                            Background="{StaticResource SurfaceMutedBrush}"
+                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="14"
+                            VerticalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="&#xEA8F;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="18" HorizontalAlignment="Center"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       Margin="0,0,0,6"/>
+                            <TextBlock Text="{Binding StatusBadge}"
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{StaticResource SuccessBrush}"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ═══════ FILTERS CARD ═══════ -->
+            <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="18"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="SlotId"/>
-                    <TextBox x:Name="SlotIdTextBox" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8"/>
+                    <DockPanel Grid.Row="0" LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                            <TextBlock Text="&#xE721;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="18" Foreground="{StaticResource AccentBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Busca clínica" Style="{StaticResource SectionTitleTextBlockStyle}"/>
+                                <TextBlock Text="Configure o endpoint, filtros e carregue os profissionais." Style="{StaticResource CaptionTextBlockStyle}"/>
+                            </StackPanel>
+                        </StackPanel>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="HoldId"/>
-                    <TextBox x:Name="HoldIdTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8"/>
+                        <Button DockPanel.Dock="Right" Width="190"
+                                Command="{Binding SearchProfessionalsCommand}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE721;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="13" Foreground="#FF0D1117"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Buscar profissionais" VerticalAlignment="Center" Foreground="#FF0D1117"/>
+                            </StackPanel>
+                        </Button>
+                    </DockPanel>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="CustomerId"/>
-                    <TextBox x:Name="CustomerIdTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8"/>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="14"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="Idempotency Key"/>
-                    <TextBox x:Name="IdempotencyKeyTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8"/>
+                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,16,0">
+                            <TextBlock Text="API BASE URL" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <TextBox Text="{Binding ApiBaseUrl, UpdateSourceTrigger=PropertyChanged}"
+                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"/>
+                        </StackPanel>
 
-                    <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,8">
-                        <Button x:Name="CreateHoldButton" Width="180" Margin="0,0,12,0" Content="Criar Hold" Click="CreateHoldButton_OnClick"/>
-                        <Button x:Name="ConfirmHoldButton" Width="180" Content="Confirmar Hold" Click="ConfirmHoldButton_OnClick"/>
-                    </StackPanel>
+                        <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,16,0">
+                            <TextBlock Text="DATA" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <DatePicker SelectedDate="{Binding SelectedDate}"
+                                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"/>
+                        </StackPanel>
 
-                    <TextBox Grid.Row="5"
-                             Grid.ColumnSpan="2"
-                             x:Name="ResultTextBox"
-                             Height="140"
-                             IsReadOnly="True"
-                             TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto"
-                             AcceptsReturn="True"/>
+                        <StackPanel Grid.Row="0" Grid.Column="3">
+                            <TextBlock Text="PERÍODO" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <ComboBox ItemsSource="{Binding Periods}"
+                                      SelectedItem="{Binding SelectedPeriod}"
+                                      IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="ESPECIALIDADE" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <ComboBox ItemsSource="{Binding Specialties}"
+                                      SelectedItem="{Binding SelectedSpecialty}"
+                                      IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,16,0">
+                            <TextBlock Text="UNIDADE" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <ComboBox ItemsSource="{Binding Units}"
+                                      SelectedItem="{Binding SelectedUnit}"
+                                      IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
-            </GroupBox>
+            </Border>
 
-        </StackPanel>
+            <!-- ═══════ BOTTOM 3 COLUMNS ═══════ -->
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.35*"/>
+                    <ColumnDefinition Width="1.35*"/>
+                    <ColumnDefinition Width="1.1*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Profissionais -->
+                <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,16,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="14"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Grid.Row="0" LastChildFill="False">
+                            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                <TextBlock Text="&#xE716;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="16" Foreground="{StaticResource AccentBrush}"
+                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <StackPanel>
+                                    <TextBlock Text="Profissionais" Style="{StaticResource SectionTitleTextBlockStyle}"/>
+                                    <TextBlock Text="Selecione para consultar a agenda." Style="{StaticResource CaptionTextBlockStyle}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border DockPanel.Dock="Right"
+                                    Background="#221F6FEB" CornerRadius="999" Padding="12,5"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ProfessionalsCount}"
+                                           FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                            </Border>
+                        </DockPanel>
+
+                        <DataGrid Grid.Row="2"
+                                  ItemsSource="{Binding Professionals}"
+                                  SelectedItem="{Binding SelectedProfessional, Mode=TwoWay}"
+                                  AutoGenerateColumns="False" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Profissional" Binding="{Binding ProfessionalName}" Width="2*"/>
+                                <DataGridTextColumn Header="Especialidade" Binding="{Binding SpecialtyName}" Width="2*"/>
+                                <DataGridTextColumn Header="Unidade" Binding="{Binding ClinicUnitName}" Width="2*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
+                <!-- Horários -->
+                <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" Margin="0,0,16,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="14"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Grid.Row="0" LastChildFill="False">
+                            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                <TextBlock Text="&#xE823;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="16" Foreground="{StaticResource SuccessBrush}"
+                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <StackPanel>
+                                    <TextBlock Text="Horários disponíveis" Style="{StaticResource SectionTitleTextBlockStyle}"/>
+                                    <TextBlock Text="Escolha um slot para iniciar a reserva." Style="{StaticResource CaptionTextBlockStyle}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border DockPanel.Dock="Right"
+                                    Background="#223FB950" CornerRadius="999" Padding="12,5"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="{Binding AvailabilityCount}"
+                                           FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{StaticResource SuccessBrush}"/>
+                            </Border>
+                        </DockPanel>
+
+                        <DataGrid Grid.Row="2"
+                                  ItemsSource="{Binding AvailableSlots}"
+                                  SelectedItem="{Binding SelectedSlot, Mode=TwoWay}"
+                                  AutoGenerateColumns="False" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Slot" Binding="{Binding SlotId}" Width="1.6*"/>
+                                <DataGridTextColumn Header="Início" Binding="{Binding StartsAt}" Width="*"/>
+                                <DataGridTextColumn Header="Fim" Binding="{Binding EndsAt}" Width="*"/>
+                                <DataGridTextColumn Header="Sala" Binding="{Binding SeatCode}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
+                <!-- Reserva -->
+                <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Section title -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A7;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="16" Foreground="{StaticResource AccentBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <StackPanel>
+                                <TextBlock Text="Reserva e confirmação" Style="{StaticResource SectionTitleTextBlockStyle}"/>
+                                <TextBlock Text="Crie e confirme o hold." Style="{StaticResource CaptionTextBlockStyle}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- SlotId -->
+                        <StackPanel Grid.Row="2">
+                            <TextBlock Text="SLOT ID" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <TextBox Text="{Binding SlotId, UpdateSourceTrigger=PropertyChanged}"
+                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"/>
+                        </StackPanel>
+
+                        <!-- HoldId -->
+                        <StackPanel Grid.Row="4">
+                            <TextBlock Text="HOLD ID" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <TextBox Text="{Binding HoldId, UpdateSourceTrigger=PropertyChanged}"
+                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"/>
+                        </StackPanel>
+
+                        <!-- CustomerId -->
+                        <StackPanel Grid.Row="6">
+                            <TextBlock Text="CUSTOMER ID" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding CustomerId, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"/>
+                                <Button Grid.Column="1" Margin="8,0,0,0"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding GenerateCustomerIdCommand}">
+                                    <TextBlock Text="&#xE72C;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="13" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- IdempotencyKey -->
+                        <StackPanel Grid.Row="8">
+                            <TextBlock Text="IDEMPOTENCY KEY" Style="{StaticResource LabelTextBlockStyle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding IdempotencyKey, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"/>
+                                <Button Grid.Column="1" Margin="8,0,0,0"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding GenerateIdempotencyKeyCommand}">
+                                    <TextBlock Text="&#xE72C;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="13" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- Action buttons -->
+                        <StackPanel Grid.Row="10" Orientation="Horizontal">
+                            <Button Width="130" Margin="0,0,10,0"
+                                    Command="{Binding CreateHoldCommand}"
+                                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE710;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="12" Foreground="#FF0D1117"
+                                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Criar hold" VerticalAlignment="Center" Foreground="#FF0D1117"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Width="130"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Command="{Binding ConfirmHoldCommand}"
+                                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE73E;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="12" Foreground="{StaticResource SuccessBrush}"
+                                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Confirmar" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Result output -->
+                        <Border Grid.Row="12"
+                                Background="{StaticResource SurfaceMutedBrush}"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="12" Padding="14">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="8"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                    <TextBlock Text="&#xE946;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="RETORNO" Style="{StaticResource LabelTextBlockStyle}" Margin="0"/>
+                                </StackPanel>
+                                <TextBox Grid.Row="2"
+                                         Text="{Binding ResultText, Mode=OneWay}"
+                                         IsReadOnly="True" TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         VerticalContentAlignment="Top"
+                                         AcceptsReturn="True"
+                                         Background="Transparent" BorderThickness="0"
+                                         Padding="0" MinHeight="180"
+                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
     </ScrollViewer>
 </Window>

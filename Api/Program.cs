@@ -43,13 +43,16 @@ public class Program
             await initializer.InitializeAsync();
         }
 
-        if (app.Environment.IsDevelopment())
-        {
+        //if (app.Environment.IsDevelopment())
+        //{
             app.UseSwagger();
             app.UseSwaggerUI();
-        }
-
-        app.UseHttpsRedirection();
+        //}
+        //if(!app.Environment.IsDevelopment())
+        //{
+        //    app.UseHttpsRedirection();
+        //}
+        
         app.UseAuthorization();
         app.UseMiddleware<Api.Middleware.IdempotencyMiddleware>();
         app.MapControllers();

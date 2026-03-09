@@ -26,6 +26,7 @@ services:
         condition: service_healthy
     environment:
       - ConnectionStrings__Default=Host=db;Database=concurrent_booking;Username=postgres;Password=postgres
+      - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
     ports:
       - "5000:80"
