@@ -66,6 +66,7 @@ public class Program
         builder.Services.AddScoped<ConcurrentBooking.Application.Repositories.IBookingRepository, EfBookingRepository>();
         builder.Services.AddScoped<ConcurrentBooking.Application.Repositories.IIdempotencyRepository, EfIdempotencyRepository>();
         builder.Services.AddScoped<IClinicalDiscoveryService, ClinicalDiscoveryService>();
+        builder.Services.AddScoped<ISlotManagementService, SlotManagementService>();
         builder.Services.AddScoped<IClinicalDemoDataSeeder, ClinicalDemoDataSeeder>();
         builder.Services.AddScoped<IDatabaseInitializer, MigratingDatabaseInitializer>();
 

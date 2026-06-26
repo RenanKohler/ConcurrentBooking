@@ -10,11 +10,12 @@ public class Slot
 
     public Guid ClinicUnitId { get; init; }
 
-    public DateTime StartsAt { get; init; }
+    // Settable so slots can be rescheduled/edited in place (CRUD update).
+    public DateTime StartsAt { get; set; }
 
-    public DateTime EndsAt { get; init; }
+    public DateTime EndsAt { get; set; }
 
-    public string? SeatCode { get; init; }
+    public string? SeatCode { get; set; }
 
     public Slot()
     {

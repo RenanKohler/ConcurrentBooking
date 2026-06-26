@@ -6,6 +6,12 @@ public sealed record SpecialtyListItem(Guid Id, string Name);
 
 public sealed record ClinicUnitListItem(Guid Id, string Name);
 
+public sealed record ProfessionalListItem(
+    Guid ProfessionalId,
+    string ProfessionalName,
+    Guid SpecialtyId,
+    string SpecialtyName);
+
 public sealed record ProfessionalSearchQuery(Guid SpecialtyId, DateOnly Date, Guid? UnitId);
 
 public sealed record ProfessionalSearchItem(

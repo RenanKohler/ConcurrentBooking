@@ -35,6 +35,16 @@ public sealed class ClinicalDiscoveryService : IClinicalDiscoveryService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<ProfessionalListItem>> GetAllProfessionalsAsync(CancellationToken cancellationToken)
+    {
+        return await (
+            from professional in _db.Professionals
+            join specialty in _db.Specialties on professional.SpecialtyId equals specialty.Id
+            orderby professional.FullName
+            select new ProfessionalListItem(professional.Id, professional.FullName, specialty.Id, specialty.Name))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<ProfessionalSearchItem>> GetProfessionalsAsync(
         ProfessionalSearchQuery query,
         CancellationToken cancellationToken)

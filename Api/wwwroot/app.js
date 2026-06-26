@@ -289,6 +289,189 @@ function fmtTime(d) {
 function fmtDate(d) {
     return d.toLocaleDateString("pt-BR");
 }
+function pad2(n) { return String(n).padStart(2, "0"); }
+function toLocalDateValue(d) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function toLocalTimeValue(d) {
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+// ===========================================================================
+// Admin / CRUD de horários
+// ===========================================================================
+const admin = { editingId: null, professionalsLoaded: false };
+
+function fillOptions(sel, items, valueOf, labelOf, firstLabel) {
+    const previous = sel.value;
+    sel.innerHTML = "";
+    if (firstLabel !== undefined) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = firstLabel;
+        sel.appendChild(opt);
+    }
+    items.forEach((it) => {
+        const opt = document.createElement("option");
+        opt.value = valueOf(it);
+        opt.textContent = labelOf(it);
+        sel.appendChild(opt);
+    });
+    if (previous) sel.value = previous;
+}
+
+async function loadAdminReferenceData() {
+    try {
+        const [pros, units] = await Promise.all([api("api/professionals/all"), api("api/units")]);
+        fillOptions($("adminProfessional"), pros, (p) => p.professionalId,
+            (p) => `${p.professionalName} — ${p.specialtyName}`);
+        fillOptions($("filterProfessional"), pros, (p) => p.professionalId,
+            (p) => p.professionalName, "Todos");
+        fillOptions($("adminUnit"), units, (u) => u.id, (u) => u.name);
+        fillOptions($("filterUnit"), units, (u) => u.id, (u) => u.name, "Todas");
+        admin.professionalsLoaded = true;
+    } catch (e) {
+        toast("Falha ao carregar dados do admin: " + e.message, "err");
+    }
+}
+
+async function saveSlot() {
+    const professionalId = $("adminProfessional").value;
+    const clinicUnitId = $("adminUnit").value;
+    const date = $("adminDate").value;
+    const time = $("adminTime").value;
+    const durationMinutes = parseInt($("adminDuration").value, 10) || 30;
+    const seatCode = $("adminSeat").value.trim() || null;
+
+    if (!professionalId) return toast("Selecione um profissional.", "err");
+    if (!clinicUnitId) return toast("Selecione uma unidade.", "err");
+    if (!date || !time) return toast("Informe data e hora.", "err");
+
+    // Interpret the entered date/time as local wall-clock, send as UTC ISO.
+    const startsAt = new Date(`${date}T${time}`).toISOString();
+
+    try {
+        if (admin.editingId) {
+            await api(`api/slots/${admin.editingId}`, {
+                method: "PUT",
+                body: JSON.stringify({ startsAt, durationMinutes, seatCode }),
+            });
+            toast("Horário atualizado.", "ok");
+        } else {
+            await api("api/slots", {
+                method: "POST",
+                body: JSON.stringify({ professionalId, clinicUnitId, startsAt, durationMinutes, seatCode }),
+            });
+            toast("Horário adicionado.", "ok");
+        }
+        exitEditMode();
+        await loadAdminSlots();
+    } catch (e) {
+        toast("Falha ao salvar: " + e.message, "err");
+    }
+}
+
+function enterEditMode(slot) {
+    admin.editingId = slot.slotId;
+    const start = new Date(slot.startsAt);
+    const durationMin = Math.max(5, Math.round((new Date(slot.endsAt) - start) / 60000));
+    $("adminProfessional").value = slot.professionalId;
+    $("adminUnit").value = slot.clinicUnitId;
+    $("adminDate").value = toLocalDateValue(start);
+    $("adminTime").value = toLocalTimeValue(start);
+    $("adminDuration").value = durationMin;
+    $("adminSeat").value = slot.seatCode || "";
+    $("adminProfessional").disabled = true;
+    $("adminUnit").disabled = true;
+    $("slotFormTitle").textContent = "✏️ Editar horário";
+    $("slotSaveBtn").textContent = "Salvar alterações";
+    $("slotCancelEditBtn").classList.remove("hidden");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function exitEditMode() {
+    admin.editingId = null;
+    $("adminProfessional").disabled = false;
+    $("adminUnit").disabled = false;
+    $("adminSeat").value = "";
+    $("slotFormTitle").textContent = "➕ Adicionar horário";
+    $("slotSaveBtn").textContent = "Adicionar";
+    $("slotCancelEditBtn").classList.add("hidden");
+}
+
+async function loadAdminSlots() {
+    const params = new URLSearchParams();
+    if ($("filterProfessional").value) params.set("professionalId", $("filterProfessional").value);
+    if ($("filterUnit").value) params.set("unitId", $("filterUnit").value);
+    if ($("filterDate").value) params.set("date", $("filterDate").value);
+
+    const container = $("adminSlotsList");
+    container.innerHTML = '<p class="empty"><span class="spinner"></span>Carregando...</p>';
+    try {
+        const qs = params.toString();
+        const slots = await api("api/slots" + (qs ? "?" + qs : ""));
+        renderAdminSlots(slots);
+    } catch (e) {
+        container.innerHTML = `<p class="empty">Erro: ${e.message}</p>`;
+        toast("Falha ao carregar horários: " + e.message, "err");
+    }
+}
+
+const STATUS_LABEL = { Available: "Disponível", Held: "Em hold", Booked: "Reservado" };
+
+function renderAdminSlots(slots) {
+    const container = $("adminSlotsList");
+    container.innerHTML = "";
+    if (!slots.length) {
+        container.innerHTML = '<p class="empty">Nenhum horário para os filtros selecionados.</p>';
+        return;
+    }
+    slots.forEach((slot) => {
+        const start = new Date(slot.startsAt);
+        const end = new Date(slot.endsAt);
+        const statusClass = "status-" + slot.status.toLowerCase();
+        const row = document.createElement("div");
+        row.className = "row" + (slot.slotId === admin.editingId ? " editing" : "");
+        row.style.cursor = "default";
+        row.innerHTML = `
+            <div>
+                <div class="title">${fmtDate(start)} ${fmtTime(start)}–${fmtTime(end)}</div>
+                <div class="meta">${slot.professionalName} &middot; ${slot.clinicUnitName}${slot.seatCode ? " &middot; " + slot.seatCode : ""}</div>
+            </div>
+            <div class="row-actions">
+                <span class="status ${statusClass}">${STATUS_LABEL[slot.status] || slot.status}</span>
+                <button class="btn-edit">Editar</button>
+                <button class="btn-delete">Excluir</button>
+            </div>`;
+        row.querySelector(".btn-edit").addEventListener("click", () => enterEditMode(slot));
+        row.querySelector(".btn-delete").addEventListener("click", () => deleteSlot(slot));
+        container.appendChild(row);
+    });
+}
+
+async function deleteSlot(slot) {
+    const when = `${fmtDate(new Date(slot.startsAt))} ${fmtTime(new Date(slot.startsAt))}`;
+    if (!confirm(`Excluir o horário de ${slot.professionalName} em ${when}?`)) return;
+    try {
+        await api(`api/slots/${slot.slotId}`, { method: "DELETE" });
+        toast("Horário excluído.", "ok");
+        if (admin.editingId === slot.slotId) exitEditMode();
+        await loadAdminSlots();
+    } catch (e) {
+        toast("Falha ao excluir: " + e.message, "err");
+    }
+}
+
+function switchTab(which) {
+    const booking = which === "booking";
+    $("tabBooking").classList.toggle("active", booking);
+    $("tabAdmin").classList.toggle("active", !booking);
+    $("viewBooking").classList.toggle("hidden", !booking);
+    $("viewAdmin").classList.toggle("hidden", booking);
+    if (!booking && !admin.professionalsLoaded) {
+        loadAdminReferenceData();
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Bootstrap
@@ -296,7 +479,9 @@ function fmtDate(d) {
 function init() {
     $("baseUrl").value = window.location.origin + "/";
     $("customerId").value = uuid();
-    $("date").value = new Date().toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
+    $("date").value = today;
+    $("adminDate").value = today;
 
     $("newCustomerBtn").addEventListener("click", () => {
         $("customerId").value = uuid();
@@ -308,6 +493,15 @@ function init() {
             toast("Falha na busca: " + err.message, "err")
         )
     );
+
+    // Tabs
+    $("tabBooking").addEventListener("click", () => switchTab("booking"));
+    $("tabAdmin").addEventListener("click", () => switchTab("admin"));
+
+    // Admin actions
+    $("slotSaveBtn").addEventListener("click", (e) => withSpinner(e.currentTarget, "Salvando...", saveSlot));
+    $("slotCancelEditBtn").addEventListener("click", exitEditMode);
+    $("loadSlotsBtn").addEventListener("click", (e) => withSpinner(e.currentTarget, "Carregando...", loadAdminSlots));
 
     loadSpecialties();
     loadUnits();

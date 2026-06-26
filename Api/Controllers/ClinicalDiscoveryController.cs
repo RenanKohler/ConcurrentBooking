@@ -28,6 +28,13 @@ public sealed class ClinicalDiscoveryController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("professionals/all")]
+    public async Task<ActionResult<IReadOnlyCollection<ProfessionalListItem>>> GetAllProfessionals(CancellationToken cancellationToken)
+    {
+        var result = await _discoveryService.GetAllProfessionalsAsync(cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("professionals")]
     public async Task<ActionResult<IReadOnlyCollection<ProfessionalSearchItem>>> GetProfessionals(
         [FromQuery] Guid specialtyId,
