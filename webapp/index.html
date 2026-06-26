@@ -25,62 +25,131 @@
         Informe a URL da sua API .NET (ex.: <code>https://concurrentbooking.onrender.com</code>) no campo acima e clique em <strong>Conectar</strong>.
     </div>
 
+    <nav class="tabs tabs-bar">
+        <button id="tabBooking" class="tab active">Reservar</button>
+        <button id="tabAdmin" class="tab">Horários (CRUD)</button>
+    </nav>
+
     <main>
-        <section class="card">
-            <h2><span class="step">1</span> Buscar profissionais</h2>
-            <div class="grid">
-                <div class="field">
-                    <label for="specialty">Especialidade</label>
-                    <select id="specialty"></select>
+        <!-- ============ BOOKING VIEW ============ -->
+        <div id="viewBooking">
+            <section class="card">
+                <h2><span class="step">1</span> Buscar profissionais</h2>
+                <div class="grid">
+                    <div class="field">
+                        <label for="specialty">Especialidade</label>
+                        <select id="specialty"></select>
+                    </div>
+                    <div class="field">
+                        <label for="unit">Unidade (opcional)</label>
+                        <select id="unit"><option value="">Todas</option></select>
+                    </div>
+                    <div class="field">
+                        <label for="date">Data</label>
+                        <input id="date" type="date" />
+                    </div>
+                    <div class="field">
+                        <label for="period">Período</label>
+                        <select id="period">
+                            <option value="Morning">Manhã (06:00–11:59)</option>
+                            <option value="Afternoon">Tarde (12:00–17:59)</option>
+                            <option value="Evening">Noite (18:00–22:59)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="field">
-                    <label for="unit">Unidade (opcional)</label>
-                    <select id="unit"><option value="">Todas</option></select>
+                <div class="customer-row">
+                    <div class="field">
+                        <label for="customerId">Customer ID</label>
+                        <input id="customerId" type="text" />
+                    </div>
+                    <button id="newCustomerBtn" class="ghost" title="Gerar novo GUID">novo ID</button>
+                    <button id="searchProfessionalsBtn" class="primary">Buscar profissionais</button>
                 </div>
-                <div class="field">
-                    <label for="date">Data</label>
-                    <input id="date" type="date" />
-                </div>
-                <div class="field">
-                    <label for="period">Período</label>
-                    <select id="period">
-                        <option value="Morning">Manhã (06:00–11:59)</option>
-                        <option value="Afternoon">Tarde (12:00–17:59)</option>
-                        <option value="Evening">Noite (18:00–22:59)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="customer-row">
-                <div class="field">
-                    <label for="customerId">Customer ID</label>
-                    <input id="customerId" type="text" />
-                </div>
-                <button id="newCustomerBtn" class="ghost" title="Gerar novo GUID">novo ID</button>
-                <button id="searchProfessionalsBtn" class="primary">Buscar profissionais</button>
-            </div>
-        </section>
+            </section>
 
-        <section class="card">
-            <h2><span class="step">2</span> Profissionais</h2>
-            <div id="professionalsList" class="list">
-                <p class="empty">Faça uma busca para listar profissionais.</p>
-            </div>
-        </section>
+            <section class="card">
+                <h2><span class="step">2</span> Profissionais</h2>
+                <div id="professionalsList" class="list">
+                    <p class="empty">Faça uma busca para listar profissionais.</p>
+                </div>
+            </section>
 
-        <section class="card">
-            <h2><span class="step">3</span> Horários disponíveis</h2>
-            <p id="availabilityContext" class="muted"></p>
-            <div id="slotsList" class="list">
-                <p class="empty">Selecione um profissional para ver os horários.</p>
-            </div>
-        </section>
+            <section class="card">
+                <h2><span class="step">3</span> Horários disponíveis</h2>
+                <p id="availabilityContext" class="muted"></p>
+                <div id="slotsList" class="list">
+                    <p class="empty">Selecione um profissional para ver os horários.</p>
+                </div>
+            </section>
 
-        <section class="card">
-            <h2><span class="step">4</span> Reserva &amp; confirmação</h2>
-            <div id="bookingPanel" class="booking">
-                <p class="empty">Selecione um horário disponível para iniciar a reserva.</p>
-            </div>
-        </section>
+            <section class="card">
+                <h2><span class="step">4</span> Reserva &amp; confirmação</h2>
+                <div id="bookingPanel" class="booking">
+                    <p class="empty">Selecione um horário disponível para iniciar a reserva.</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============ ADMIN / CRUD VIEW ============ -->
+        <div id="viewAdmin" class="hidden">
+            <section class="card">
+                <h2 id="slotFormTitle">➕ Adicionar horário</h2>
+                <div class="grid">
+                    <div class="field">
+                        <label for="adminProfessional">Profissional</label>
+                        <select id="adminProfessional"></select>
+                    </div>
+                    <div class="field">
+                        <label for="adminUnit">Unidade</label>
+                        <select id="adminUnit"></select>
+                    </div>
+                    <div class="field">
+                        <label for="adminDate">Data</label>
+                        <input id="adminDate" type="date" />
+                    </div>
+                    <div class="field">
+                        <label for="adminTime">Hora</label>
+                        <input id="adminTime" type="time" />
+                    </div>
+                    <div class="field">
+                        <label for="adminDuration">Duração (min)</label>
+                        <input id="adminDuration" type="number" min="5" step="5" value="30" />
+                    </div>
+                    <div class="field">
+                        <label for="adminSeat">Assento (opcional)</label>
+                        <input id="adminSeat" type="text" placeholder="ex.: C08-01" />
+                    </div>
+                </div>
+                <div class="actions">
+                    <button id="slotSaveBtn" class="primary">Adicionar</button>
+                    <button id="slotCancelEditBtn" class="ghost hidden">Cancelar edição</button>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>📋 Horários cadastrados</h2>
+                <div class="grid">
+                    <div class="field">
+                        <label for="filterProfessional">Profissional</label>
+                        <select id="filterProfessional"><option value="">Todos</option></select>
+                    </div>
+                    <div class="field">
+                        <label for="filterUnit">Unidade</label>
+                        <select id="filterUnit"><option value="">Todas</option></select>
+                    </div>
+                    <div class="field">
+                        <label for="filterDate">Data</label>
+                        <input id="filterDate" type="date" />
+                    </div>
+                    <div class="field" style="justify-content:flex-end">
+                        <button id="loadSlotsBtn" class="primary">Atualizar lista</button>
+                    </div>
+                </div>
+                <div id="adminSlotsList" class="list">
+                    <p class="empty">Clique em "Atualizar lista" para carregar os horários.</p>
+                </div>
+            </section>
+        </div>
     </main>
 
     <footer class="app-footer">

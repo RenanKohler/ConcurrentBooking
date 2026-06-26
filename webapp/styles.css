@@ -302,3 +302,44 @@ button.ghost {
     font-size: 0.8rem;
 }
 .app-footer a { color: var(--muted); }
+
+/* ---- tabs + admin CRUD additions ---- */
+.tabs-bar {
+    max-width: 960px;
+    margin: 16px auto -4px;
+    padding: 0 16px;
+    display: flex;
+    gap: 8px;
+}
+.tab {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px 8px 0 0;
+    padding: 9px 18px;
+}
+.tab.active {
+    background: var(--surface);
+    color: var(--text);
+    border-bottom-color: var(--surface);
+}
+
+.row .status {
+    font-size: 0.78rem;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-weight: 600;
+}
+.status-available { background: rgba(34,197,94,0.15); color: var(--success); }
+.status-held { background: rgba(245,158,11,0.15); color: var(--warning); }
+.status-booked { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+.row .row-actions { display: flex; gap: 6px; align-items: center; }
+.row .row-actions button {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+}
+.btn-edit { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.btn-delete { background: rgba(239,68,68,0.15); color: var(--danger); }
+.row.editing { border-color: var(--warning); }
