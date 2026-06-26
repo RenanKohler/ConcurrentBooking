@@ -4,7 +4,6 @@
 databases:
   - name: concurrentbooking-db
     databaseName: concurrent_booking
-    user: postgres
     plan: free
 
 services:
