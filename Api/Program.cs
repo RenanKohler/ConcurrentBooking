@@ -53,6 +53,10 @@ public class Program
         //    app.UseHttpsRedirection();
         //}
         
+        // Serve the static web client (Api/wwwroot/index.html) at the site root.
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
+
         app.UseAuthorization();
         app.UseMiddleware<Api.Middleware.IdempotencyMiddleware>();
         app.MapControllers();
