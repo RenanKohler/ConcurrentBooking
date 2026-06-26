@@ -15,8 +15,27 @@ public class Program
 
         builder.Services.AddControllers();
 
-        var conn = builder.Configuration.GetConnectionString("Default")
-            ?? "Host=localhost;Database=concurrent_booking;Username=postgres;Password=postgres";
+        // Managed hosts (Render/Railway/Heroku) inject the listening port via PORT.
+        var port = Environment.GetEnvironmentVariable("PORT");
+        if (!string.IsNullOrWhiteSpace(port))
+        {
+            builder.WebHost.UseUrls($"http://+:{port}");
+        }
+
+        // Connection string resolution order:
+        //   1) ConnectionStrings:Default (appsettings / ConnectionStrings__Default env var)
+        //   2) DATABASE_URL in postgres:// URL form (managed Postgres add-ons)
+        //   3) local development default
+        var conn = builder.Configuration.GetConnectionString("Default");
+        if (string.IsNullOrWhiteSpace(conn))
+        {
+            var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+            if (!string.IsNullOrWhiteSpace(databaseUrl))
+            {
+                conn = BuildNpgsqlConnectionString(databaseUrl);
+            }
+        }
+        conn ??= "Host=localhost;Database=concurrent_booking;Username=postgres;Password=postgres";
 
         builder.Services.AddDbContext<BookingDbContext>(options => options.UseNpgsql(conn));
 
@@ -61,5 +80,23 @@ public class Program
         app.UseMiddleware<Api.Middleware.IdempotencyMiddleware>();
         app.MapControllers();
         await app.RunAsync();
+    }
+
+    // Converts a postgres://user:pass@host:port/db URL (Render/Railway/Heroku style)
+    // into the Npgsql keyword connection string the app expects.
+    private static string BuildNpgsqlConnectionString(string databaseUrl)
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':', 2);
+        var csb = new Npgsql.NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port <= 0 ? 5432 : uri.Port,
+            Username = Uri.UnescapeDataString(userInfo[0]),
+            Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            SslMode = Npgsql.SslMode.Prefer
+        };
+        return csb.ConnectionString;
     }
 }

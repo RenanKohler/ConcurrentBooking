@@ -1,0 +1,27 @@
+# Render blueprint: API (serving the web client) + managed PostgreSQL.
+# Deploy: Render dashboard -> New -> Blueprint -> connect this repo -> Apply.
+# Both the web service and the database use Render's free plan.
+databases:
+  - name: concurrentbooking-db
+    databaseName: concurrent_booking
+    user: postgres
+    plan: free
+
+services:
+  - type: web
+    name: concurrentbooking
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      # Render injects the managed Postgres URL; Program.cs converts it to the
+      # Npgsql keyword format and runs EF migrations on startup.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: concurrentbooking-db
+          property: connectionString
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
