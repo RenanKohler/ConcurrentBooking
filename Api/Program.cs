@@ -15,6 +15,28 @@ public class Program
 
         builder.Services.AddControllers();
 
+        // CORS so a separately hosted web client (e.g. Netlify) can call this API.
+        // Defaults to any origin; override with CORS_ALLOWED_ORIGINS (comma-separated).
+        const string CorsPolicy = "WebClient";
+        var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]
+            ?? Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy(CorsPolicy, policy =>
+            {
+                if (string.IsNullOrWhiteSpace(allowedOrigins) || allowedOrigins.Trim() == "*")
+                {
+                    policy.AllowAnyOrigin();
+                }
+                else
+                {
+                    policy.WithOrigins(allowedOrigins.Split(
+                        ',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                }
+                policy.AllowAnyHeader().AllowAnyMethod();
+            });
+        });
+
         // Managed hosts (Render/Railway/Heroku) inject the listening port via PORT.
         var port = Environment.GetEnvironmentVariable("PORT");
         if (!string.IsNullOrWhiteSpace(port))
@@ -76,6 +98,7 @@ public class Program
         app.UseDefaultFiles();
         app.UseStaticFiles();
 
+        app.UseCors(CorsPolicy);
         app.UseAuthorization();
         app.UseMiddleware<Api.Middleware.IdempotencyMiddleware>();
         app.MapControllers();
