@@ -1,0 +1,6 @@
+# Netlify config for the static reservations web app (webapp/).
+# The app is a dependency-free static site that consumes the .NET API at a
+# user-configured base URL, so there is no build step.
+[build]
+  publish = "webapp"
+  command = ""

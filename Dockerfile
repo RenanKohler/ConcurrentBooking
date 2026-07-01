@@ -9,21 +9,20 @@ RUN dotnet restore Api/ConcurrentBooking.Api.csproj
 # Publish API
 RUN dotnet publish Api/ConcurrentBooking.Api.csproj -c Release -o /app/publish --no-restore
 
-# Runtime image (use SDK so migrations can run)
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS runtime
+# Runtime image: ASP.NET runtime is enough — migrations run inside the app
+# on startup (MigratingDatabaseInitializer), so no SDK or source tree needed.
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
 # Copy published app
 COPY --from=build /app/publish ./
-# Copy full source so dotnet-ef can run against projects
-COPY --from=build /src /src
 
 # Copy entrypoint script
 COPY entrypoint.sh ./entrypoint.sh
 RUN sed -i 's/\r$//' ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
-ENV DOTNET_MODIFIABLE_ASSEMBLIES=debug
+# Default port for local/container runs; managed hosts (Render) override via PORT.
 ENV ASPNETCORE_URLS=http://+:80
 
 EXPOSE 80
